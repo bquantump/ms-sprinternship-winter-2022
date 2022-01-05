@@ -7,21 +7,17 @@ import os
 
 print(f"Provisioning a virtual machine...some operations might take a minute or two.")
 
-# Acquire a credential object using CLI-based authentication.
 credential = DefaultAzureCredential()
 
-# Retrieve subscription ID from environment variable.
 subscription_id = os.environ["SUBSCRIPTION_ID"]
 
 
-# Step 1: Provision a resource group
 
-# Obtain the management object for resources, using the credentials from the CLI login.
+
+# Step 1: Provision a resource group
 resource_client = ResourceManagementClient(credential, subscription_id)
 
-# Constants we need in multiple places: the resource group name and the region
-# in which we provision resources. You can change these values however you want.
-RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-steve1"
+RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-steve12" # rename
 LOCATION = "westus2"
 
 # Provision the resource group.
@@ -34,12 +30,9 @@ rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME
 
 print(f"Provisioned resource group {rg_result.name} in the {rg_result.location} region")
 
-#nsg_params = NetworkSecurityGroup(id= "testnsg", location="westus2")
-#nsg = network_client.network_security_groups.begin_create_or_update(RESOURCE_GROUP_NAME, "testnsg", {})
-#print(nsg.result().as_dict())
-#print(nsg_made)
 
-# get this working
+
+# get this working here!!!!
 
 # Step 2: provision a virtual network
 
@@ -57,6 +50,24 @@ NIC_NAME = "python-example-nic"
 
 # Obtain the management object for networks
 network_client = NetworkManagementClient(credential, subscription_id)
+nsg = network_client.network_security_groups.begin_create_or_update(RESOURCE_GROUP_NAME, "testnsg", {'location': 'westus2',
+                                                                                                     "security_rules": [
+          {
+            "name": "sshrule",
+            "properties": {
+              "protocol": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "destinationPortRange": "22",
+              "sourcePortRange": "*",
+              "priority": 130,
+              "direction": "Inbound"
+            }
+          }
+        ]})
+nsg_id = nsg.result().as_dict()['id']
+print('\nid is ' + str(nsg_id))
 
 # Provision the virtual network and wait for completion
 poller = network_client.virtual_networks.begin_create_or_update(RESOURCE_GROUP_NAME,
@@ -107,11 +118,9 @@ poller = network_client.network_interfaces.begin_create_or_update(RESOURCE_GROUP
             "name": IP_CONFIG_NAME,
             "subnet": { "id": subnet_result.id },
             "public_ip_address": {"id": ip_address_result.id }
-        }]
+        }],
+        "network_security_group": {'id': f'{nsg_id}'}
     }
-    #'network_security_group': {
-    #    'id': '<NSG-ID-HERE>'
-    #}
 )
 
 nic_result = poller.result()
@@ -153,8 +162,7 @@ poller = compute_client.virtual_machines.begin_create_or_update(RESOURCE_GROUP_N
               "publicKeys": [
                 {
                   "path": f"/home/{USERNAME}/.ssh/authorized_keys",
-                  #add your id_rsa.pub here
-                  "keyData": ""
+                  "keyData": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDj2RY58T10C60a8q0sKdu1YiwecMXdGsj8M0aOOcIBm2jMydG8kLUuIt9qva7HE8FHSVJZqyg49PAvdO+wIUVRPNZYQNTSdc0GpoXv8gfajkQjBI3Uj87Q6uJDueeFPcQnlTBF3hLTHc2JYaSL+o6OFG6xT1El9/NFdUm9yrOIaVbfukqD46PGXwxvDArONemoU/XisxT0Eu4C2pD47bYVilDTCCCwGa2UfrZg1hE6jlNV2bIE+3drT6qFprQ2SOYQQUOCFcjghIUOs9r1K1IOUk/fme+vJLGhN45+VNO/K7fTTTw0RZhAebz6tw7bA504T0bGCgWSP27b83g2NKC6qOrD7t3yqzmD9WdcQKqzuGr1DgflwJtglfgfwH0jnnlWTy4cng5f/SOfPzf4fisORXdSkBAyfvMcFPAZnDSbtD1vpVgQ7QsbhD0Jw0gX2nsJK+0tGfMLrrAvtKrCSfzkRGkY6JWBROGWAFPMlXu9KPBDv3Xg4MBgfRR11v7EfXZ/xftXRVqHUCAd7arkU9GPQSiqNfEtAfkxska+YJFy4E2syu639vHsfgUb5a/yfS58MXgIsk1c5ZtOAaVb3QnlRJsjJKHAaZsHVcfTRnwdIiMpULXJoPT4Mpih2SSVWEV38kHIh8Rn2+X7MVzdR1Ae5sNlhzIFSBnYShp3bxL8cQ== stevens@microsoft.com"
                 }
               ]
             },
@@ -172,3 +180,5 @@ poller = compute_client.virtual_machines.begin_create_or_update(RESOURCE_GROUP_N
 vm_result = poller.result()
 
 print(f"Provisioned virtual machine {vm_result.name}")
+
+
