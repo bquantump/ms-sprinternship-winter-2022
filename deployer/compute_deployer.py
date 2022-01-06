@@ -6,10 +6,13 @@ from azure.mgmt.compute import ComputeManagementClient
 from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
+from azure.mgmt.keyvault import KeyVaultManagementClient
+from azure.mgmt.keyvault.models import AccessPolicyEntry, Permissions, VaultCreateOrUpdateParameters
+from azure.keyvault.secrets import SecretClient
 import os
 
 
-def create_vm(name, location, credential, rg_name):
+def create_vm(name, location, credential, rg_name, key_vault):
     
     # get this working here!!!!
 
@@ -29,7 +32,7 @@ def create_vm(name, location, credential, rg_name):
 
     # Obtain the management object for networks
     network_client = NetworkManagementClient(credential, subscription_id)
-    nsg = network_client.network_security_groups.begin_create_or_update(RESOURCE_GROUP_NAME, "testnsg", {'location': 'westus2',
+    nsg = network_client.network_security_groups.begin_create_or_update(rg_name, "testnsg", {'location': 'westus2',
                                                                                                      "security_rules": [
           {
             "name": "sshrule",
@@ -49,10 +52,10 @@ def create_vm(name, location, credential, rg_name):
     print('\nid is ' + str(nsg_id))
 
     # Provision the virtual network and wait for completion
-    poller = network_client.virtual_networks.begin_create_or_update(RESOURCE_GROUP_NAME,
+    poller = network_client.virtual_networks.begin_create_or_update(rg_name,
     VNET_NAME,
     {
-        "location": LOCATION,
+        "location": location,
         "address_space": {
             "address_prefixes": ["10.0.0.0/16"]
         }
@@ -65,7 +68,7 @@ def create_vm(name, location, credential, rg_name):
 
 
     # Step 3: Provision the subnet and wait for completion
-    poller = network_client.subnets.begin_create_or_update(RESOURCE_GROUP_NAME, 
+    poller = network_client.subnets.begin_create_or_update(rg_name, 
         VNET_NAME, SUBNET_NAME,
         { "address_prefix": "10.0.0.0/24" }
     )
@@ -74,10 +77,10 @@ def create_vm(name, location, credential, rg_name):
     print(f"Provisioned virtual subnet {subnet_result.name} with address prefix {subnet_result.address_prefix}")
 
     # Step 4: Provision an IP address and wait for completion
-    poller = network_client.public_ip_addresses.begin_create_or_update(RESOURCE_GROUP_NAME,
+    poller = network_client.public_ip_addresses.begin_create_or_update(rg_name,
     IP_NAME,
     {
-        "location": LOCATION,
+        "location": location,
         "sku": { "name": "Standard" },
         "public_ip_allocation_method": "Static",
         "public_ip_address_version" : "IPV4"
@@ -89,10 +92,10 @@ def create_vm(name, location, credential, rg_name):
     print(f"Provisioned public IP address {ip_address_result.name} with address {ip_address_result.ip_address}")
 
     # Step 5: Provision the network interface client
-    poller = network_client.network_interfaces.begin_create_or_update(RESOURCE_GROUP_NAME,
+    poller = network_client.network_interfaces.begin_create_or_update(rg_name,
     NIC_NAME, 
     {
-        "location": LOCATION,
+        "location": location,
         "ip_configurations": [ {
             "name": IP_CONFIG_NAME,
             "subnet": { "id": subnet_result.id },
@@ -116,16 +119,148 @@ def create_vm(name, location, credential, rg_name):
     private_key = key.private_bytes(crypto_serialization.Encoding.PEM,crypto_serialization.PrivateFormat.PKCS8,crypto_serialization.NoEncryption())
     public_key = key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH,crypto_serialization.PublicFormat.OpenSSH)
 
-    # save the private key to a file
-    # save private key as: <vmname>_key.pem
-    # public key should go into the keyData filed: public_key.decode("utf-8")
+    TENANT_ID = os.environ.get("AZURE_TENANT_ID", None)
+    CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", None)
+    CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", None)
+    
+    keyvault_client = KeyVaultManagementClient(credential, subscription_id)
+    
+    print(f'vault name is {key_vault}')
 
-    priv_key_file = open('shivani2_key.pem', 'w')
+    #Create vault
+    vault = keyvault_client.vaults.begin_create_or_update(
+        rg_name,
+        key_vault,
+        {
+          "location": "eastus",
+          "properties": {
+            "tenant_id": TENANT_ID,
+            "sku": {
+              "family": "A",
+              "name": "standard"
+            },
+            "access_policies": [
+              {
+                "tenant_id": TENANT_ID,
+                "object_id": "07cd4bf3-741a-47bd-b3e5-26ac9e31a169",
+                "permissions": {
+                  "keys": [
+                    "encrypt",
+                    "decrypt",
+                    "wrapKey",
+                    "unwrapKey",
+                    "sign",
+                    "verify",
+                    "get",
+                    "list",
+                    "create",
+                    "update",
+                    "import",
+                    "delete",
+                    "backup",
+                    "restore",
+                    "recover",
+                    "purge"
+                  ],
+                  "secrets": [
+                    "get",
+                    "list",
+                    "set",
+                    "delete",
+                    "backup",
+                    "restore",
+                    "recover",
+                    "purge"
+                  ],
+                  "certificates": [
+                    "get",
+                    "list",
+                    "delete",
+                    "create",
+                    "import",
+                    "update",
+                    "managecontacts",
+                    "getissuers",
+                    "listissuers",
+                    "setissuers",
+                    "deleteissuers",
+                    "manageissuers",
+                    "recover",
+                    "purge"
+                  ]
+                }
+              }, {
+                "applicationId": None,
+                "objectId": "07cd4bf3-741a-47bd-b3e5-26ac9e31a169",
+                "permissions": {
+                "certificates": None,
+                "keys": None,
+                "secrets": [
+                "set",
+                "list",
+                "purge",
+                "get",
+                "backup",
+                "recover",
+                "restore",
+                "delete"
+                ],
+                "storage": None
+                },
+                "tenantId": TENANT_ID
+                }
+            ],
+            "enabled_for_deployment": True,
+            "enabled_for_disk_encryption": True,
+            "enabled_for_template_deployment": True
+          }
+        }
+    ).result()
+    print("Create vault:\n{}".format(vault))
+
+    # Get vault
+    vault = keyvault_client.vaults.get(
+        rg_name,
+        key_vault
+    )
+    print("Get vault:\n{}".format(vault))
+
+    #policy = AccessPolicyEntry(
+    #        tenant_id=TENANT_ID,
+    #        object_id=CLIENT_ID,
+    #        application_id=CLIENT_SECRET,
+    #        permissions=Permissions(keys=None,
+    #                                secrets=None,
+    #                                certificates=None,
+    #                                storage=None))
+    
+    #vault.properties.access_policies.append(policy)
+    #update_params = VaultCreateOrUpdateParameters(location = vault.location, tags=vault.tags, properties=vault.properties)
+    #keyvault_client.vaults.begin_create_or_update(rg_name, key_vault, update_params)
+
+    priv_key_file = open('samanvitha_key.pem', 'w')
     priv_key_file.write(private_key.decode('utf-8'))
     priv_key_file.close()
 
-   
+    
+    secret_client = SecretClient(vault_url=f"https://{key_vault}.vault.azure.net/", credential=credential)
+    set_secret = secret_client.set_secret("privatekeysecret", private_key)
 
+    print(set_secret.name)
+    print(set_secret.value)
+    print(set_secret.properties.version)
+    
+    
+    #get_secret = secret_client.get_secret("private_key_secret")
+    
+    #print(get_secret.name)
+    #print(get_secret.value)
+
+    #deleted_secret = secret_client.begin_delete_secret("private_key_secret").result()
+    
+    #print(deleted_secret.name)
+    #print(deleted_secret.deleted_date)
+    
     USERNAME = "azureuser"
 
     print(f"Provisioning virtual machine {VM_NAME}; this operation might take a few minutes.")
@@ -133,9 +268,9 @@ def create_vm(name, location, credential, rg_name):
     # Provision the VM specifying only minimal arguments, which defaults to an Ubuntu 18.04 VM
     # on a Standard DS1 v2 plan with a public IP address and a default virtual network/subnet.
 
-    poller = compute_client.virtual_machines.begin_create_or_update(RESOURCE_GROUP_NAME, VM_NAME,
+    poller = compute_client.virtual_machines.begin_create_or_update(rg_name, name,
         {
-            "location": LOCATION,
+            "location": location,
             "storage_profile": {
                 "image_reference": {
                     "publisher": 'Canonical',
@@ -148,7 +283,7 @@ def create_vm(name, location, credential, rg_name):
                 "vm_size": "Standard_DS1_v2"
             },
             "os_profile": {
-                "computer_name": VM_NAME,
+                "computer_name": name,
                 "admin_username": USERNAME,
                 "linuxConfiguration": {
                 "ssh": {
@@ -186,8 +321,9 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "ExampleVM"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-shivani1" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-samanvitha1055" # rename
     LOCATION = "westus2"
+    VAULT = "vaultnewmsamanvitha1055"
 
     # Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
@@ -200,8 +336,10 @@ if __name__ == '__main__':
     name = VM_NAME
     location = LOCATION
     rg_name = RESOURCE_GROUP_NAME
+    key_vault = VAULT
+    
 
-    create_vm(name, location, credential, rg_name)
+    create_vm(name, location, credential, rg_name, key_vault)
 
     print(f"Provisioned resource group {rg_result.name} in the {rg_result.location} region")
     
