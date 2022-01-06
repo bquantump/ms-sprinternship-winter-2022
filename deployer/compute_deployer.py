@@ -12,23 +12,14 @@ from azure.keyvault.secrets import SecretClient
 import os
 
 
-def create_vm(name, location, credential, rg_name, key_vault):
+def create_vm(vm_name, location, credential, rg_name, key_vault, object_id, 
+            vnet_name, subnet_name, ip_name, ip_config_name, nic_name):
     
-    # get this working here!!!!
-
-    # Step 2: provision a virtual network
-
-    # A virtual machine requires a network interface client (NIC). A NIC requires
-    # a virtual network and subnet along with an IP address. Therefore we must provision
-    # these downstream components first, then provision the NIC, after which we
-    # can provision the VM.
-
-    # Network and IP address names
-    VNET_NAME = "python-example-vnet"
-    SUBNET_NAME = "python-example-subnet"
-    IP_NAME = "python-example-ip"
-    IP_CONFIG_NAME = "python-example-ip-config"
-    NIC_NAME = "python-example-nic"
+    VNET_NAME = vnet_name
+    SUBNET_NAME = subnet_name
+    IP_NAME = ip_name,
+    IP_CONFIG_NAME = ip_config_name
+    NIC_NAME = nic_name
 
     # Obtain the management object for networks
     network_client = NetworkManagementClient(credential, subscription_id)
@@ -49,7 +40,6 @@ def create_vm(name, location, credential, rg_name, key_vault):
           }
         ]})
     nsg_id = nsg.result().as_dict()['id']
-    print('\nid is ' + str(nsg_id))
 
     # Provision the virtual network and wait for completion
     poller = network_client.virtual_networks.begin_create_or_update(rg_name,
@@ -65,7 +55,6 @@ def create_vm(name, location, credential, rg_name, key_vault):
     vnet_result = poller.result()
 
     print(f"Provisioned virtual network {vnet_result.name} with address prefixes {vnet_result.address_space.address_prefixes}")
-
 
     # Step 3: Provision the subnet and wait for completion
     poller = network_client.subnets.begin_create_or_update(rg_name, 
@@ -109,11 +98,6 @@ def create_vm(name, location, credential, rg_name, key_vault):
 
     print(f"Provisioned network interface client {nic_result.name}")
 
-    # Step 6: Provision the virtual machine
-
-
-    # Obtain the management object for virtual machines
-
     compute_client = ComputeManagementClient(credential, subscription_id)
     key = rsa.generate_private_key(backend=crypto_default_backend(),public_exponent=65537,key_size=2048)
     private_key = key.private_bytes(crypto_serialization.Encoding.PEM,crypto_serialization.PrivateFormat.PKCS8,crypto_serialization.NoEncryption())
@@ -142,7 +126,7 @@ def create_vm(name, location, credential, rg_name, key_vault):
             "access_policies": [
               {
                 "tenant_id": TENANT_ID,
-                "object_id": "07cd4bf3-741a-47bd-b3e5-26ac9e31a169",
+                "object_id": object_id,
                 "permissions": {
                   "keys": [
                     "encrypt",
@@ -191,7 +175,7 @@ def create_vm(name, location, credential, rg_name, key_vault):
                 }
               }, {
                 "applicationId": None,
-                "objectId": "07cd4bf3-741a-47bd-b3e5-26ac9e31a169",
+                "objectId": object_id,
                 "permissions": {
                 "certificates": None,
                 "keys": None,
@@ -211,64 +195,24 @@ def create_vm(name, location, credential, rg_name, key_vault):
                 }
             ],
             "enabled_for_deployment": True,
-            "enabled_for_disk_encryption": True,
+            "enabled_for_disk_encryption": False,
             "enabled_for_template_deployment": True
           }
         }
     ).result()
-    print("Create vault:\n{}".format(vault))
-
-    # Get vault
-    vault = keyvault_client.vaults.get(
-        rg_name,
-        key_vault
-    )
-    print("Get vault:\n{}".format(vault))
-
-    #policy = AccessPolicyEntry(
-    #        tenant_id=TENANT_ID,
-    #        object_id=CLIENT_ID,
-    #        application_id=CLIENT_SECRET,
-    #        permissions=Permissions(keys=None,
-    #                                secrets=None,
-    #                                certificates=None,
-    #                                storage=None))
-    
-    #vault.properties.access_policies.append(policy)
-    #update_params = VaultCreateOrUpdateParameters(location = vault.location, tags=vault.tags, properties=vault.properties)
-    #keyvault_client.vaults.begin_create_or_update(rg_name, key_vault, update_params)
-
-    priv_key_file = open('samanvitha_key.pem', 'w')
-    priv_key_file.write(private_key.decode('utf-8'))
-    priv_key_file.close()
 
     
     secret_client = SecretClient(vault_url=f"https://{key_vault}.vault.azure.net/", credential=credential)
-    set_secret = secret_client.set_secret("privatekeysecret", private_key)
-
-    print(set_secret.name)
-    print(set_secret.value)
-    print(set_secret.properties.version)
-    
-    
-    #get_secret = secret_client.get_secret("private_key_secret")
-    
-    #print(get_secret.name)
-    #print(get_secret.value)
-
-    #deleted_secret = secret_client.begin_delete_secret("private_key_secret").result()
-    
-    #print(deleted_secret.name)
-    #print(deleted_secret.deleted_date)
+    set_secret = secret_client.set_secret(f"{vm_name}_key", private_key)
     
     USERNAME = "azureuser"
 
-    print(f"Provisioning virtual machine {VM_NAME}; this operation might take a few minutes.")
+    print(f"Provisioning virtual machine {vm_name}; this operation might take a few minutes.")
 
     # Provision the VM specifying only minimal arguments, which defaults to an Ubuntu 18.04 VM
     # on a Standard DS1 v2 plan with a public IP address and a default virtual network/subnet.
 
-    poller = compute_client.virtual_machines.begin_create_or_update(rg_name, name,
+    poller = compute_client.virtual_machines.begin_create_or_update(rg_name, vm_name,
         {
             "location": location,
             "storage_profile": {
@@ -283,7 +227,7 @@ def create_vm(name, location, credential, rg_name, key_vault):
                 "vm_size": "Standard_DS1_v2"
             },
             "os_profile": {
-                "computer_name": name,
+                "computer_name": vm_name,
                 "admin_username": USERNAME,
                 "linuxConfiguration": {
                 "ssh": {
@@ -338,8 +282,10 @@ if __name__ == '__main__':
     rg_name = RESOURCE_GROUP_NAME
     key_vault = VAULT
     
-
-    create_vm(name, location, credential, rg_name, key_vault)
+    obj_id = os.environ['OBJECT_ID']
+    create_vm(name, location, credential, rg_name, key_vault, obj_id, "vnetname", "subnetnameforvm", "ipnameformvm", 
+              "ipconfigname", 'nicname')
+    
 
     print(f"Provisioned resource group {rg_result.name} in the {rg_result.location} region")
     
