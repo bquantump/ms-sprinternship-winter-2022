@@ -18,9 +18,9 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     
     VNET_NAME = vnet_name
     SUBNET_NAME = subnet_name
-    IP_NAME = ip_name,
-    IP_CONFIG_NAME = ip_config_name
-    NIC_NAME = nic_name
+    IP_NAME = vm_name + ip_name,
+    IP_CONFIG_NAME = vm_name + ip_config_name
+    NIC_NAME = vm_name + nic_name
     
     VNET_NAME = "python-example-vnet"
     SUBNET_NAME = "python-example-subnet"
@@ -103,7 +103,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     print(f"Provisioned public IP address {ip_address_result.name} with address {ip_address_result.ip_address}")
 
     # Step 5: Provision the network interface client
-    poller = network_client.network_interfaces.begin_create_or_update(rg_name, vm_name + NIC_NAME, 
+    poller = network_client.network_interfaces.begin_create_or_update(rg_name, NIC_NAME, 
     {
         "location": location,
         "ip_configurations": [ {
@@ -293,7 +293,7 @@ if __name__ == '__main__':
 
     # Step 1: Provision a resource group
     resource_client = ResourceManagementClient(credential, subscription_id)
-    VM_NAME = "ExampleVM"
+    VM_NAME = "ExampleVM2"
 
     RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-samanvitha1059" # rename
     LOCATION = "westus2"
