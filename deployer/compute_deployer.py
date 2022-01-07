@@ -238,7 +238,8 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     
     secret_client = SecretClient(vault_url=f"https://{key_vault}.vault.azure.net/", credential=credential)
-    set_secret = secret_client.set_secret(f"{vm_name}-key", private_key)
+    set_secret = secret_client.set_secret(f"{vm_name}-private-key", private_key)
+    set_secret = secret_client.set_secret(f"{vm_name}-public-key", public_key)
     
     USERNAME = "azureuser"
 
@@ -288,7 +289,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     return ip_address_result.ip_address
 
 def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME):
-   
+       
     ip_address = []
     for i in range(len(workloads)):
         ip_address.append(create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME))
@@ -308,9 +309,9 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "ExampleVM1"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-chan1" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-anusha29" # rename
     LOCATION = "westus2"
-    VAULT = "vaultname123"
+    VAULT = "df78237897893"
 
     #Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
