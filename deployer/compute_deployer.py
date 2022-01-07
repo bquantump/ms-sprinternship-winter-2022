@@ -18,16 +18,21 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     
     VNET_NAME = vnet_name
     SUBNET_NAME = subnet_name
-    IP_NAME = vm_name + ip_name,
+    IP_NAME = vm_name + ip_name
     IP_CONFIG_NAME = vm_name + ip_config_name
     NIC_NAME = vm_name + nic_name
     
-    VNET_NAME = "python-example-vnet"
-    SUBNET_NAME = "python-example-subnet"
-    IP_NAME = "python-example-ip"
-    IP_CONFIG_NAME = "python-example-ip-config"
-    NIC_NAME = "python-example-nic"
+    compute_client = ComputeManagementClient(credential, subscription_id)
 
+    try:
+        vm_result = compute_client.virtual_machines.get(rg_name, vm_name=vm_name)
+        print("vm already exists!")
+        
+        return None
+    except ResourceNotFoundError as e:
+        print('resource does not exist, making vm')
+        
+        
     # Obtain the management object for networks
     network_client = NetworkManagementClient(credential, subscription_id)
     nsg = network_client.network_security_groups.begin_create_or_update(rg_name, "testnsg", {'location': 'westus2',
@@ -119,7 +124,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     print(f"Provisioned network interface client {nic_result.name}")
 
-    compute_client = ComputeManagementClient(credential, subscription_id)
+    
     key = rsa.generate_private_key(backend=crypto_default_backend(),public_exponent=65537,key_size=2048)
     private_key = key.private_bytes(crypto_serialization.Encoding.PEM,crypto_serialization.PrivateFormat.PKCS8,crypto_serialization.NoEncryption())
     public_key = key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH,crypto_serialization.PublicFormat.OpenSSH)
@@ -247,10 +252,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
             "location": location,
             "storage_profile": {
                 "image_reference": {
-                    "publisher": 'Canonical',
-                    "offer": "UbuntuServer",
-                    "sku": "16.04.0-LTS",
-                    "version": "latest"
+                    "id": f"/subscriptions/{subscription_id}/resourceGroups/az-mi-sdk-rg/providers/Microsoft.Compute/galleries/azsdrsharedgallery/images/azsdrdevvm"
                 }
             },
             "hardware_profile": {
@@ -282,8 +284,11 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     vm_result = poller.result()
 
     print(f"Provisioned virtual machine {vm_result.name}")
+    
+    return ip_address_result.ip_address
 
-   
+
+
 if __name__ == '__main__':
     print(f"Provisioning a virtual machine...some operations might take a minute or two.")
 
@@ -293,11 +298,11 @@ if __name__ == '__main__':
 
     # Step 1: Provision a resource group
     resource_client = ResourceManagementClient(credential, subscription_id)
-    VM_NAME = "ExampleVM2"
+    VM_NAME = "ExampleVM1"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-samanvitha1059" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-samanvitha113" # rename
     LOCATION = "westus2"
-    VAULT = "vaultnewmsamanvitha1056"
+    VAULT = "vaultnewmsamanvitha11"
 
     # Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
@@ -306,6 +311,11 @@ if __name__ == '__main__':
         }
     )
 
+    VNET_NAME = "python-example-vnet"
+    SUBNET_NAME = "python-example-subnet"
+    IP_NAME = "python-example-ip"
+    IP_CONFIG_NAME = "python-example-ip-config"
+    NIC_NAME = "python-example-nic"
   
     name = VM_NAME
     location = LOCATION
@@ -313,12 +323,10 @@ if __name__ == '__main__':
     key_vault = VAULT
     
     obj_id = os.environ['OBJECT_ID']
-    create_vm(name, location, credential, rg_name, key_vault, obj_id, "vnetname", "subnetnameforvm", "python-example-ip", 
-              "ipconfigname", 'nicname')
+    ip_address_string = create_vm(name, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME)
     
-
-    print(f"Provisioned resource group {rg_result.name} in the {rg_result.location} region")
+    print(ip_address_string)
     
-    print(f"Provisioning a virtual machine...some operations might take a minute or two.")
+    print("Completed!")
 
     
