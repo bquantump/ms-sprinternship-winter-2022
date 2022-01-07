@@ -9,6 +9,7 @@ from cryptography.hazmat.backends import default_backend as crypto_default_backe
 from azure.mgmt.keyvault import KeyVaultManagementClient
 from azure.mgmt.keyvault.models import AccessPolicyEntry, Permissions, VaultCreateOrUpdateParameters
 from azure.keyvault.secrets import SecretClient
+from azure.core.exceptions import ResourceNotFoundError
 import os
 
 
@@ -20,6 +21,12 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     IP_NAME = ip_name,
     IP_CONFIG_NAME = ip_config_name
     NIC_NAME = nic_name
+    
+    VNET_NAME = "python-example-vnet"
+    SUBNET_NAME = "python-example-subnet"
+    IP_NAME = "python-example-ip"
+    IP_CONFIG_NAME = "python-example-ip-config"
+    NIC_NAME = "python-example-nic"
 
     # Obtain the management object for networks
     network_client = NetworkManagementClient(credential, subscription_id)
@@ -41,27 +48,42 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
         ]})
     nsg_id = nsg.result().as_dict()['id']
 
-    # Provision the virtual network and wait for completion
-    poller = network_client.virtual_networks.begin_create_or_update(rg_name,
-    VNET_NAME,
-    {
-        "location": location,
-        "address_space": {
-            "address_prefixes": ["10.0.0.0/16"]
-        }
-    }
-    )
 
-    vnet_result = poller.result()
+    make_vnet = False
+    try:
+        vnet_result = network_client.virtual_networks.get(rg_name, VNET_NAME)
+    except ResourceNotFoundError as e:
+        print('resource does not exist, making vent')
+        make_vnet = True
+        
+    if make_vnet:
+        poller = network_client.virtual_networks.begin_create_or_update(rg_name,
+        VNET_NAME,
+        {
+            "location": location,
+            "address_space": {
+                "address_prefixes": ["10.0.0.0/16"]
+            }
+        }
+        )
+        vnet_result = poller.result()
 
     print(f"Provisioned virtual network {vnet_result.name} with address prefixes {vnet_result.address_space.address_prefixes}")
 
+    make_subnet = False
+    try:
+        subnet_result = network_client.subnets.get(rg_name, VNET_NAME, SUBNET_NAME)
+    except ResourceNotFoundError as e:
+        print('resource does not exist, making subnet')
+        make_subnet = True
+
     # Step 3: Provision the subnet and wait for completion
-    poller = network_client.subnets.begin_create_or_update(rg_name, 
-        VNET_NAME, SUBNET_NAME,
-        { "address_prefix": "10.0.0.0/24" }
-    )
-    subnet_result = poller.result()
+    if make_subnet:
+        poller = network_client.subnets.begin_create_or_update(rg_name, 
+            VNET_NAME, SUBNET_NAME,
+            { "address_prefix": "10.0.0.0/24" }
+        )
+        subnet_result = poller.result()
 
     print(f"Provisioned virtual subnet {subnet_result.name} with address prefix {subnet_result.address_prefix}")
 
@@ -81,8 +103,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     print(f"Provisioned public IP address {ip_address_result.name} with address {ip_address_result.ip_address}")
 
     # Step 5: Provision the network interface client
-    poller = network_client.network_interfaces.begin_create_or_update(rg_name,
-    NIC_NAME, 
+    poller = network_client.network_interfaces.begin_create_or_update(rg_name, vm_name + NIC_NAME, 
     {
         "location": location,
         "ip_configurations": [ {
@@ -109,101 +130,110 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     
     keyvault_client = KeyVaultManagementClient(credential, subscription_id)
     
-    print(f'vault name is {key_vault}')
-
-    #Create vault
-    vault = keyvault_client.vaults.begin_create_or_update(
-        rg_name,
-        key_vault,
-        {
-          "location": "eastus",
-          "properties": {
-            "tenant_id": TENANT_ID,
-            "sku": {
-              "family": "A",
-              "name": "standard"
-            },
-            "access_policies": [
-              {
+    make_vault = False
+    try:
+        does_exist = keyvault_client.vaults.get(
+            rg_name,
+            key_vault
+        )
+    except ResourceNotFoundError as e:
+        print('resource does not exist, making vault')
+        make_vault = True
+        
+    if make_vault:
+        #Create vault
+        vault = keyvault_client.vaults.begin_create_or_update(
+            rg_name,
+            key_vault,
+            {
+            "location": "eastus",
+            "properties": {
                 "tenant_id": TENANT_ID,
-                "object_id": object_id,
-                "permissions": {
-                  "keys": [
-                    "encrypt",
-                    "decrypt",
-                    "wrapKey",
-                    "unwrapKey",
-                    "sign",
-                    "verify",
-                    "get",
-                    "list",
-                    "create",
-                    "update",
-                    "import",
-                    "delete",
-                    "backup",
-                    "restore",
-                    "recover",
-                    "purge"
-                  ],
-                  "secrets": [
-                    "get",
-                    "list",
-                    "set",
-                    "delete",
-                    "backup",
-                    "restore",
-                    "recover",
-                    "purge"
-                  ],
-                  "certificates": [
-                    "get",
-                    "list",
-                    "delete",
-                    "create",
-                    "import",
-                    "update",
-                    "managecontacts",
-                    "getissuers",
-                    "listissuers",
-                    "setissuers",
-                    "deleteissuers",
-                    "manageissuers",
-                    "recover",
-                    "purge"
-                  ]
-                }
-              }, {
-                "applicationId": None,
-                "objectId": object_id,
-                "permissions": {
-                "certificates": None,
-                "keys": None,
-                "secrets": [
-                "set",
-                "list",
-                "purge",
-                "get",
-                "backup",
-                "recover",
-                "restore",
-                "delete"
-                ],
-                "storage": None
+                "sku": {
+                "family": "A",
+                "name": "standard"
                 },
-                "tenantId": TENANT_ID
-                }
-            ],
-            "enabled_for_deployment": True,
-            "enabled_for_disk_encryption": False,
-            "enabled_for_template_deployment": True
-          }
-        }
-    ).result()
+                "access_policies": [
+                {
+                    "tenant_id": TENANT_ID,
+                    "object_id": object_id,
+                    "permissions": {
+                    "keys": [
+                        "encrypt",
+                        "decrypt",
+                        "wrapKey",
+                        "unwrapKey",
+                        "sign",
+                        "verify",
+                        "get",
+                        "list",
+                        "create",
+                        "update",
+                        "import",
+                        "delete",
+                        "backup",
+                        "restore",
+                        "recover",
+                        "purge"
+                    ],
+                    "secrets": [
+                        "get",
+                        "list",
+                        "set",
+                        "delete",
+                        "backup",
+                        "restore",
+                        "recover",
+                        "purge"
+                    ],
+                    "certificates": [
+                        "get",
+                        "list",
+                        "delete",
+                        "create",
+                        "import",
+                        "update",
+                        "managecontacts",
+                        "getissuers",
+                        "listissuers",
+                        "setissuers",
+                        "deleteissuers",
+                        "manageissuers",
+                        "recover",
+                        "purge"
+                    ]
+                    }
+                }, {
+                    "applicationId": None,
+                    "objectId": object_id,
+                    "permissions": {
+                    "certificates": None,
+                    "keys": None,
+                    "secrets": [
+                    "set",
+                    "list",
+                    "purge",
+                    "get",
+                    "backup",
+                    "recover",
+                    "restore",
+                    "delete"
+                    ],
+                    "storage": None
+                    },
+                    "tenantId": TENANT_ID
+                    }
+                ],
+                "enabled_for_deployment": True,
+                "enabled_for_disk_encryption": False,
+                "enabled_for_template_deployment": True
+            }
+            }
+        ).result()
 
     
     secret_client = SecretClient(vault_url=f"https://{key_vault}.vault.azure.net/", credential=credential)
-    set_secret = secret_client.set_secret(f"{vm_name}_key", private_key)
+    set_secret = secret_client.set_secret(f"{vm_name}-key", private_key)
     
     USERNAME = "azureuser"
 
@@ -265,9 +295,9 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "ExampleVM"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-samanvitha1055" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-samanvitha1059" # rename
     LOCATION = "westus2"
-    VAULT = "vaultnewmsamanvitha1055"
+    VAULT = "vaultnewmsamanvitha1056"
 
     # Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
@@ -283,7 +313,7 @@ if __name__ == '__main__':
     key_vault = VAULT
     
     obj_id = os.environ['OBJECT_ID']
-    create_vm(name, location, credential, rg_name, key_vault, obj_id, "vnetname", "subnetnameforvm", "ipnameformvm", 
+    create_vm(name, location, credential, rg_name, key_vault, obj_id, "vnetname", "subnetnameforvm", "python-example-ip", 
               "ipconfigname", 'nicname')
     
 
@@ -292,4 +322,3 @@ if __name__ == '__main__':
     print(f"Provisioning a virtual machine...some operations might take a minute or two.")
 
     
-   
