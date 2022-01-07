@@ -287,28 +287,36 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     
     return ip_address_result.ip_address
 
-
+def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME):
+   
+    ip_address = []
+    for i in range(len(workloads)):
+        ip_address.append(create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME))
+        
+    return ip_address
 
 if __name__ == '__main__':
+    
+    workloads = ['vmname1', 'vmname2', 'vmname3']    
     print(f"Provisioning a virtual machine...some operations might take a minute or two.")
 
     credential = DefaultAzureCredential()
 
     subscription_id = os.environ["SUBSCRIPTION_ID"]
 
-    # Step 1: Provision a resource group
+    #Step 1: Provision a resource group
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "ExampleVM1"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-samanvitha113" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-chan1" # rename
     LOCATION = "westus2"
-    VAULT = "vaultnewmsamanvitha11"
+    VAULT = "vaultname123"
 
-    # Provision the resource group.
+    #Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
-        {
-            "location": LOCATION
-        }
+      {
+        "location": LOCATION
+    }
     )
 
     VNET_NAME = "python-example-vnet"
@@ -323,9 +331,8 @@ if __name__ == '__main__':
     key_vault = VAULT
     
     obj_id = os.environ['OBJECT_ID']
-    ip_address_string = create_vm(name, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME)
-    
-    print(ip_address_string)
+    ip_adresses = create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME)
+    print(ip_adresses);
     
     print("Completed!")
 
