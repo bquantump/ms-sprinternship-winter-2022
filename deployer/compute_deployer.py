@@ -14,7 +14,7 @@ import os
 
 
 def create_vm(vm_name, location, credential, rg_name, key_vault, object_id, 
-            vnet_name, subnet_name, ip_name, ip_config_name, nic_name):
+            vnet_name, subnet_name, ip_name, ip_config_name, nic_name, subscription_id):
     
     VNET_NAME = vnet_name
     SUBNET_NAME = subnet_name
@@ -35,7 +35,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
         
     # Obtain the management object for networks
     network_client = NetworkManagementClient(credential, subscription_id)
-    nsg = network_client.network_security_groups.begin_create_or_update(rg_name, "testnsg", {'location': 'westus2',
+    nsg = network_client.network_security_groups.begin_create_or_update(rg_name, "testnsg", {'location': location,
                                                                                                      "security_rules": [
           {
             "name": "sshrule",
@@ -288,11 +288,13 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     
     return ip_address_result.ip_address
 
-def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME):
+def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
+                    IP_CONFIG_NAME, NIC_NAME, subscription_id):
        
     ip_address = []
     for i in range(len(workloads)):
-        ip_address.append(create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME))
+        ip_address.append(create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, 
+                                    VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id))
         
     return ip_address
 
@@ -309,7 +311,7 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "ExampleVM1"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-anusha29" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-anusha1" # rename
     LOCATION = "westus2"
     VAULT = "df78237897893"
 
@@ -338,3 +340,4 @@ if __name__ == '__main__':
     print("Completed!")
 
     
+
