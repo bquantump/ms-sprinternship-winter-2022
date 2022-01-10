@@ -7,7 +7,6 @@ from azure.identity import DefaultAzureCredential
 import os
 
 def run_deployment(args):
-    print(args)
     VNET_NAME = "python-example-vnet"
     SUBNET_NAME = "python-example-subnet"
     IP_NAME = "python-example-ip"
@@ -15,12 +14,12 @@ def run_deployment(args):
     NIC_NAME = "python-example-nic"
     credential = DefaultAzureCredential()
     subscription_id = os.environ["SUBSCRIPTION_ID"]
-    
+
     make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
 
 
-    create_all_vm(args.workloads, args.location, DefaultAzureCredential(), args.resource_group, args.key_vault, 
-                    os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, os.environ["SUBSCRIPTION_ID"])
+    create_all_vm(args.workloads, args.location, credential, args.resource_group, args.key_vault, 
+                    os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
     #
 
 def deployer():
