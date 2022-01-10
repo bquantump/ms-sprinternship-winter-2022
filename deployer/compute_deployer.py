@@ -15,7 +15,7 @@ import subprocess
 
 
 def create_vm(vm_name, location, credential, rg_name, key_vault, object_id, 
-            vnet_name, subnet_name, ip_name, ip_config_name, nic_name):
+            vnet_name, subnet_name, ip_name, ip_config_name, nic_name, subscription_id):
     
     VNET_NAME = vnet_name
     SUBNET_NAME = subnet_name
@@ -36,7 +36,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
         
     # Obtain the management object for networks
     network_client = NetworkManagementClient(credential, subscription_id)
-    nsg = network_client.network_security_groups.begin_create_or_update(rg_name, "testnsg", {'location': 'westus2',
+    nsg = network_client.network_security_groups.begin_create_or_update(rg_name, "testnsg", {'location': location,
                                                                                                      "security_rules": [
           {
             "name": "sshrule",
@@ -290,12 +290,13 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     return ip_address_result.ip_address, private_key
 
-def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME):
+def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
+                    IP_CONFIG_NAME, NIC_NAME, subscription_id):
        
     #step 1 workload   
     ip_address = []
     for i in range(len(workloads)):
-        list = create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME)
+        list = create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
         FILE = "helloworld.py"
 
         f = open(f"{workloads[i]}_key.pem", "w")
@@ -341,9 +342,9 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "vmName2"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-iza6" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-iza7" # rename
     LOCATION = "westus2"
-    VAULT = "newvaultnameiza6"
+    VAULT = "newvaultnameiza7"
 
     #Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
@@ -364,7 +365,7 @@ if __name__ == '__main__':
     key_vault = VAULT
     
     obj_id = os.environ['OBJECT_ID']
-    ip_adresses = create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME)
+    ip_adresses = create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
     print(ip_adresses);
     
     print("Completed!")
