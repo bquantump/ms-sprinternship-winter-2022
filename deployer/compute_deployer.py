@@ -11,6 +11,7 @@ from azure.mgmt.keyvault.models import AccessPolicyEntry, Permissions, VaultCrea
 from azure.keyvault.secrets import SecretClient
 from azure.core.exceptions import ResourceNotFoundError
 import os
+import subprocess
 
 
 def create_vm(vm_name, location, credential, rg_name, key_vault, object_id, 
@@ -286,19 +287,50 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     print(f"Provisioned virtual machine {vm_result.name}")
     
-    return ip_address_result.ip_address
+
+    return ip_address_result.ip_address, private_key
 
 def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME):
        
+    #step 1 workload   
     ip_address = []
     for i in range(len(workloads)):
-        ip_address.append(create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME))
+        list = create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME)
+        FILE = "helloworld.py"
+
+        f = open(f"{workloads[i]}_key.pem", "w")
+        f.write(list[1].decode("utf-8"))
+        f.close()
+        
+        scp_str = f"scp -i {workloads[i]}_key.pem {FILE} azureuser@{list[0]}:/home/azureuser/"
+        
+        subprocess.run(scp_str)
+    
+        run_command_parameters = {
+        'command_id': 'RunShellScript', # For linux, don't change it
+        'script': [
+            'cd /home/azureuser && python3 helloworld.py'
+            ]
+        }
+     
+        compute_client = ComputeManagementClient(credential=credential,subscription_id=subscription_id)
+
+        poller = compute_client.virtual_machines.begin_run_command(
+            rg_name,
+            workloads[i],
+            run_command_parameters);   
+        
+        result = poller.result() 
+        
+        print(result.value[0].message)
+        
+        ip_address.append(list[0])
         
     return ip_address
 
 if __name__ == '__main__':
     
-    workloads = ['vmname1', 'vmname2', 'vmname3']    
+    workloads = ['vmname2']    
     print(f"Provisioning a virtual machine...some operations might take a minute or two.")
 
     credential = DefaultAzureCredential()
@@ -307,11 +339,11 @@ if __name__ == '__main__':
 
     #Step 1: Provision a resource group
     resource_client = ResourceManagementClient(credential, subscription_id)
-    VM_NAME = "ExampleVM1"
+    VM_NAME = "vmName2"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-anusha29" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-iza6" # rename
     LOCATION = "westus2"
-    VAULT = "df78237897893"
+    VAULT = "newvaultnameiza6"
 
     #Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
@@ -336,5 +368,7 @@ if __name__ == '__main__':
     print(ip_adresses);
     
     print("Completed!")
+
+    
 
     
