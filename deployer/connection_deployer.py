@@ -1,3 +1,4 @@
+import subprocess
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.compute import ComputeManagementClient
@@ -7,12 +8,12 @@ from cryptography.hazmat.backends import default_backend as crypto_default_backe
 from azure.keyvault.secrets import SecretClient
 from azure.core.exceptions import ResourceNotFoundError
 import os
-
+import subprocess
 
 def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, nsg_name):
     #create vm with public ip that connects to same vnet and subvnets that the other vms connect to, return public ip address
     location = "westus2"
-    vm_name = "anusha11"
+    vm_name = "amyVM12"
     subscription_id = os.environ["SUBSCRIPTION_ID"]
     ip_config_name = vm_name + "ipaddress"
 
@@ -110,9 +111,17 @@ def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, ns
     vm_result = poller.result()
 
     print(f"Provisioned virtual machine {vm_result.name}")
+    
+    f = open(f"{vm_name}_key.pem", "w")
+    f.write(private_key.decode("utf-8"))
+    f.close()
+    FILE = ".\\eng\\grc\\difi_to_udp.py"
+    scp_str = f"scp -i {vm_name}_key.pem -o StrictHostKeyChecking=no {FILE} azureuser@{ip_address_result.ip_address}:/home/azureuser/"
+    
+    subprocess.run(scp_str)
 
     return ip_address_result.ip_address
 
 if __name__ == '__main__':
     credential = DefaultAzureCredential()
-    setup_tcp_connect("python-example-vnet", "python-example-subnet", "anusha10", credential, "uI7382761902", "testnsg")
+    setup_tcp_connect("python-example-vnet", "python-example-subnet", "PythonAzureExample-VM-rg-amy4", credential, "amyvault4", "testnsg")
