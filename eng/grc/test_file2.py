@@ -16,7 +16,7 @@ from argparse import ArgumentParser
 
 
 
-class another_tb:
+class test_file2:
 
     def __init__(self):
 
@@ -54,9 +54,6 @@ class another_tb:
     def set_sink_ip(self, sink_ip):
         self.sink_ip = sink_ip
 
-
-
-
-def main(top_block_cls=another_tb, options=None):
+def main(top_block_cls= test_file2, options=None):
     tb = top_block_cls()
     print("we ran the main function...")

@@ -2,6 +2,9 @@ import os
 import yaml
 
 def config_and_run_tb(config_yml, workload_file) :
+
+    instance_name = os.path.split(workload_file)[-1]
+    instance_name = instance_name.split(".")[0]
     workload_path = os.path.abspath(workload_file)
     # open the file
     f = open(workload_path, "r")
@@ -12,7 +15,7 @@ def config_and_run_tb(config_yml, workload_file) :
     exec(str)
     
 
-    instance = locals()['difi_to_udp']()
+    instance = locals()[instance_name]()
     
 
     config_path = os.path.abspath(config_yml)

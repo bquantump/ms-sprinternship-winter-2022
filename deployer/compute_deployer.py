@@ -301,8 +301,8 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     return ip_address_result.ip_address, private_key, private_key_result
 
 
-
-def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
+                  #name
+def create_all_vm(workloads, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
                     IP_CONFIG_NAME, NIC_NAME, subscription_id):
        
     #step 1 workload   
@@ -379,7 +379,10 @@ if __name__ == '__main__':
     key_vault = VAULT
     
     obj_id = os.environ['OBJECT_ID']
-    ip_adresses = create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
+
+    #workloads_paths = ""
+
+    ip_adresses = create_all_vm(workloads, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
     print(ip_adresses);
     
     print("Completed!")

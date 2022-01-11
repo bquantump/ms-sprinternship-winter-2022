@@ -1,0 +1,7 @@
+source_port: 392589
+source_ip: 99303
+sink_port: 569920
+sink_ip: 99002
+
+self.var2: 24408
+self.var3: 13984
