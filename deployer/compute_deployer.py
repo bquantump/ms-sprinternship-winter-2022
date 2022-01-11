@@ -286,44 +286,56 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     )
 
     vm_result = poller.result()
-
-    print(f"Provisioned virtual machine {vm_result.name}")
-    
     vm = compute_client.virtual_machines.instance_view(rg_name, vm_name)
 
     vm_status = vm.statuses[1].display_status
+
+    print(f"Provisioned virtual machine {vm_result.name} {vm_status}")
     
-    print(vm_status)
 
-    private_key_result = network_client.network_interfaces.get(rg_name,NIC_NAME).ip_configurations[0].private_ip_address
+    private_ip_address_result = network_client.network_interfaces.get(rg_name,NIC_NAME).ip_configurations[0].private_ip_address
     
-    print(private_key_result)
-    return ip_address_result.ip_address, private_key, private_key_result
+    return [ip_address_result.ip_address, private_key, private_ip_address_result]
 
 
-                  #name
-def create_all_vm(workloads, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
-                    IP_CONFIG_NAME, NIC_NAME, subscription_id):
+
+
+def create_all_vm(workload_names, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
+                    IP_CONFIG_NAME, NIC_NAME, subscription_id, num_retries=3):
+
        
     #step 1 workload   
-    ip_address = []
-    private_ip_adress = []
-    for i in range(len(workloads)):
-        list = create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
-        FILE = "helloworld.py"
-
-        f = open(f"{workloads[i]}_key.pem", "w")
+    public_ip_address = []
+    private_ip_address = []
+    for i in range(len(workload_names)):
+        list = create_vm(workload_names[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
+        f = open(f"{workload_names[i]}_key.pem", "w")
         f.write(list[1].decode("utf-8"))
         f.close()
+       
+        public_ip_address.append(list[0])
+        private_ip_address.append(list[2])
+
+    for i in range(len(workload_names)):
+        FILE = workload_paths[i]
+    
+        scp_str = f"scp -i {workload_names[i]}_key.pem -o StrictHostKeyChecking=no {FILE} azureuser@{public_ip_address[i]}:/home/azureuser/"
+        print(scp_str)
         
-        scp_str = f"scp -i {workloads[i]}_key.pem {FILE} azureuser@{list[0]}:/home/azureuser/"
+        value_returned = subprocess.run(scp_str)
         
-        subprocess.run(scp_str)
+        if value_returned.returncode != 0:
+            for j in range(num_retries):
+                if value_returned.returncode != 0:
+                    time.sleep(30)
+                    value_returned = subprocess.run(scp_str)
+                else:
+                    break
     
         run_command_parameters = {
         'command_id': 'RunShellScript', # For linux, don't change it
         'script': [
-            'cd /home/azureuser && python3 helloworld.py'
+            f'cd /home/azureuser && python3 {workload_paths[i]} > workload_log.txt &'
             ]
         }
      
@@ -331,21 +343,19 @@ def create_all_vm(workloads, workload_paths, location, credential, rg_name, key_
 
         poller = compute_client.virtual_machines.begin_run_command(
             rg_name,
-            workloads[i],
+            workload_names[i],
             run_command_parameters);   
         
         result = poller.result() 
         
         print(result.value[0].message)
         
-        ip_address.append(list[0])
-        private_ip_adress.append(list[2])
-
-    return ip_address, private_ip_adress
+    return public_ip_address, private_ip_address
 
 if __name__ == '__main__':
     
-    workloads = ['vmname2']    
+    workloads = ['newworkload1', 'newworkload2']  
+    workload_paths = ["helloworld.py", "helloworld.py"]  
     print(f"Provisioning a virtual machine...some operations might take a minute or two.")
 
     credential = DefaultAzureCredential()
@@ -356,9 +366,9 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "vmName2"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-amy1010" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-amy4" # rename
     LOCATION = "westus2"
-    VAULT = "newvaultnameamy1010"
+    VAULT = "amyvault4"
 
     #Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
@@ -380,11 +390,12 @@ if __name__ == '__main__':
     
     obj_id = os.environ['OBJECT_ID']
 
+
     #workloads_paths = ""
 
     ip_adresses = create_all_vm(workloads, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
-    print(ip_adresses);
-    
+    print(ip_adresses)
+
     print("Completed!")
 
     
