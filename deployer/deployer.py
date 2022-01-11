@@ -15,6 +15,10 @@ def run_deployment(args):
     credential = DefaultAzureCredential()
     subscription_id = os.environ["SUBSCRIPTION_ID"]
 
+    if len(args.workloads) != len(args.configs) :
+        raise RuntimeError('length of workloads does not match length of config')
+        
+
     make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
     create_all_vm(args.workloads, args.location, credential, args.resource_group, args.key_vault, 
                     os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
@@ -38,6 +42,8 @@ def deployer():
     parser_deploy.add_argument('location', type=str)
     parser_deploy.add_argument("--workloads", nargs="+")
     parser_deploy.add_argument('key_vault', type=str)
+
+    parser_deploy.add_argument("--configs", nargs="+")
 
     args = parser.parse_args()
     if not vars(args):
