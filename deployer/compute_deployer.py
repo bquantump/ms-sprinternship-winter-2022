@@ -1,4 +1,5 @@
 # Import the needed credential and management objects from the libraries.
+from datetime import time
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.network import NetworkManagementClient
@@ -12,6 +13,7 @@ from azure.keyvault.secrets import SecretClient
 from azure.core.exceptions import ResourceNotFoundError
 import os
 import subprocess
+import time
 
 
 def create_vm(vm_name, location, credential, rg_name, key_vault, object_id, 
@@ -287,14 +289,25 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     print(f"Provisioned virtual machine {vm_result.name}")
     
+    vm = compute_client.virtual_machines.instance_view(rg_name, vm_name)
 
-    return ip_address_result.ip_address, private_key
+    vm_status = vm.statuses[1].display_status
+    
+    print(vm_status)
+
+    private_key_result = network_client.network_interfaces.get(rg_name,NIC_NAME).ip_configurations[0].private_ip_address
+    
+    print(private_key_result)
+    return ip_address_result.ip_address, private_key, private_key_result
+
+
 
 def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
                     IP_CONFIG_NAME, NIC_NAME, subscription_id):
        
     #step 1 workload   
     ip_address = []
+    private_ip_adress = []
     for i in range(len(workloads)):
         list = create_vm(workloads[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
         FILE = "helloworld.py"
@@ -326,8 +339,9 @@ def create_all_vm(workloads, location, credential, rg_name, key_vault, obj_id, V
         print(result.value[0].message)
         
         ip_address.append(list[0])
-        
-    return ip_address
+        private_ip_adress.append(list[2])
+
+    return ip_address, private_ip_adress
 
 if __name__ == '__main__':
     
@@ -342,9 +356,9 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "vmName2"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-iza7" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-amy1010" # rename
     LOCATION = "westus2"
-    VAULT = "newvaultnameiza7"
+    VAULT = "newvaultnameamy1010"
 
     #Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
