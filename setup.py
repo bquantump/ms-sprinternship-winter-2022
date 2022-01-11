@@ -11,8 +11,10 @@ setup(
     zip_safe=False,
     classifiers=["Programming Language :: Python :: 3"],
     install_requires=[
-        #'--upgrade pip',
+        'pyyaml',
         'wheel',
+        'azure-mgmt-resource',
+        'azure.mgmt.keyvault',
         'azure-mgmt-compute',
         'azure-mgmt-network',
         'azure-eventhub',

@@ -16,7 +16,7 @@ from argparse import ArgumentParser
 
 
 
-class difi_to_udp:
+class another_tb:
 
     def __init__(self):
 
@@ -27,7 +27,9 @@ class difi_to_udp:
         self.source_ip = source_ip = "20.94.254.69"
         self.sink_port = sink_port = 65001
         self.sink_ip = sink_ip = "10.0.0.6"
-
+        self.var2 = None
+        self.var3 = None
+        
     def get_source_port(self):
         return self.source_port
 
@@ -55,6 +57,6 @@ class difi_to_udp:
 
 
 
-def main(top_block_cls=difi_to_udp, options=None):
+def main(top_block_cls=another_tb, options=None):
     tb = top_block_cls()
     print("we ran the main function...")

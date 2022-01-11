@@ -1,7 +1,7 @@
 import os
 import yaml
 
-def test(config_yml, workload_file) :
+def config_and_run_tb(config_yml, workload_file) :
     workload_path = os.path.abspath(workload_file)
     # open the file
     f = open(workload_path, "r")
@@ -37,4 +37,4 @@ def test(config_yml, workload_file) :
 if __name__ == '__main__':
     config_path = os.path.join('..', 'eng', 'sample_configs', 'test_one.yml')
     workload_path = os.path.join('..', 'eng', 'grc', 'test_file.py')
-    test(config_path, workload_path)
+    config_and_run_tb(config_path, workload_path)
