@@ -307,13 +307,17 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
     private_ip_address = []
     for i in range(len(workload_names)):
         list = create_vm(workload_names[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
-        FILE = workload_paths[i]
-
         f = open(f"{workload_names[i]}_key.pem", "w")
         f.write(list[1].decode("utf-8"))
         f.close()
-        
-        scp_str = f"scp -i {workload_names[i]}_key.pem {FILE} azureuser@{list[0]}:/home/azureuser/"
+       
+        public_ip_address.append(list[0])
+        private_ip_address.append(list[2])
+
+    for i in range(len(workload_names)):
+        FILE = workload_paths[i]
+    
+        scp_str = f"scp -i {workload_names[i]}_key.pem -o StrictHostKeyChecking=no {FILE} azureuser@{public_ip_address[i]}:/home/azureuser/"
         print(scp_str)
         
         value_returned = subprocess.run(scp_str)
@@ -329,7 +333,7 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
         run_command_parameters = {
         'command_id': 'RunShellScript', # For linux, don't change it
         'script': [
-            f'cd /home/azureuser && python3 {workload_paths[i]}'
+            f'cd /home/azureuser && python3 {workload_paths[i]} > workload_log.txt &'
             ]
         }
      
@@ -344,15 +348,12 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
         
         print(result.value[0].message)
         
-        public_ip_address.append(list[0])
-        private_ip_address.append(list[2])
-
     return public_ip_address, private_ip_address
 
 if __name__ == '__main__':
     
-    workloads = ['newworkload666', 'newworkload677', 'newworkload678']  
-    workload_paths = ["helloworld.py", "helloworld.py", "helloworld.py"]  
+    workloads = ['newworkload1', 'newworkload2']  
+    workload_paths = ["helloworld.py", "helloworld.py"]  
     print(f"Provisioning a virtual machine...some operations might take a minute or two.")
 
     credential = DefaultAzureCredential()
@@ -363,9 +364,9 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "vmName2"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-samanvitha666" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-amy4" # rename
     LOCATION = "westus2"
-    VAULT = "samanvitha2002vault"
+    VAULT = "amyvault4"
 
     #Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,
