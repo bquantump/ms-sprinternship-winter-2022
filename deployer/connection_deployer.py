@@ -1,5 +1,7 @@
 import subprocess
 from azure.identity import DefaultAzureCredential
+from azure.mgmt.eventhub import EventHubManagementClient
+from azure.mgmt.storage import StorageManagementClient
 from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.compute import ComputeManagementClient
 from cryptography.hazmat.primitives import serialization as crypto_serialization
@@ -10,6 +12,72 @@ import os
 import subprocess
 import time
 
+#from deployer.compute_deployer import RESOURCE_GROUP_NAME
+
+
+def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_name, storage_account_name, subscription_id, location, retention_in_days, partition_count):
+    
+    eventhub_client = EventHubManagementClient(credential=credential, subscription_id=subscription_id)
+    storage_client = StorageManagementClient(credential=credential, subscription_id=subscription_id)
+    
+    # Create StorageAccount
+    storage_account = storage_client.storage_accounts.begin_create(
+        rg_name,
+        storage_account_name,
+        {
+          "sku": {
+            "name": "Standard_LRS"
+          },
+          "kind": "StorageV2",
+          "location": "eastus"
+        }
+    )
+    storage_account_result = storage_account.result()
+
+    # Create Namespace
+    namespace = eventhub_client.namespaces.begin_create_or_update(
+        rg_name,
+        namespace_name,
+        {
+          "sku": {
+            "name": "Standard",
+            "tier": "Standard"
+          },
+          "location": location,
+          "tags": {
+            "tag1": "value1",
+            "tag2": "value2"
+          }
+        }
+    )
+    namespace_result = namespace.result()
+    
+    #create Eventhub
+    BODY = {"message_retention_in_days": retention_in_days,
+          "partition_count": partition_count,
+          "status": "Active",
+          "capture_description": {
+            "enabled": True,
+            "encoding": "Avro",
+            "interval_in_seconds": "120",
+            "size_limit_in_bytes": "10485763",
+            "destination": {
+              "name": "EventHubArchive.AzureBlockBlob",
+              "storage_account_resource_id": "/subscriptions/" + subscription_id + "/resourceGroups/" + rg_name + "/providers/Microsoft.Storage/storageAccounts/" + storage_account_name + "",
+              "blob_container": "container",
+              "archive_name_format": "{Namespace}/{EventHub}/{PartitionId}/{Year}/{Month}/{Day}/{Hour}/{Minute}/{Second}"
+            }
+          }
+    }
+            
+    eventhub = eventhub_client.event_hubs.create_or_update(
+        rg_name,
+        namespace_name,
+        eventhub_name,
+        BODY)
+    
+    print("eventhub completed!!")
+    
 def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, nsg_name):
     #create vm with public ip that connects to same vnet and subvnets that the other vms connect to, return public ip address
     location = "westus2"
@@ -21,8 +89,6 @@ def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, ns
     
     compute_client = ComputeManagementClient(credential, subscription_id)
     network_client = NetworkManagementClient(credential, subscription_id)
-    
-
 
     poller = network_client.public_ip_addresses.begin_create_or_update(rg_name,
     ip_config_name,
@@ -133,4 +199,14 @@ def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, ns
 
 if __name__ == '__main__':
     credential = DefaultAzureCredential()
-    setup_tcp_connect("python-example-vnet", "python-example-subnet", "PythonAzureExample-VM-rg-amy4", credential, "amyvault4", "testnsg")
+    subscription_id = os.environ["SUBSCRIPTION_ID"]
+    RESOURCE_GROUP_NAME = "samanvitha6"
+    EVENTHUB_NAME = "python-example-eventhub"
+    NAMESPACE_NAME = "python-example-namespace"
+    STORAGE_ACCOUNT_NAME = "storagesamanvitha1"
+    LOCATION = "South Central US"
+    RETENTION_IN_DAYS = "4"
+    PARTITION_COUNT = "4"
+    
+    setup_eventhub_connect(credential, RESOURCE_GROUP_NAME, NAMESPACE_NAME, EVENTHUB_NAME, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
+    #setup_tcp_connect("python-example-vnet", "python-example-subnet", "PythonAzureExample-VM-rg-amy4", credential, "amyvault4", "testnsg")

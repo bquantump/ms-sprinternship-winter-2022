@@ -1,8 +1,7 @@
 import argparse
 import sys
-
 from azure.core import credentials
-from deployer import create_all_vm, make_rg_if_does_not_exist, setup_tcp_connect, config_and_run_tb
+from deployer import create_all_vm, make_rg_if_does_not_exist, setup_eventhub_connect, setup_tcp_connect, config_and_run_tb
 from azure.identity import DefaultAzureCredential
 import os
 
@@ -14,6 +13,12 @@ def run_deployment(args):
     IP_NAME = "python-example-ip"
     IP_CONFIG_NAME = "python-example-ip-config"
     NIC_NAME = "python-example-nic"
+    EVENTHUB_NAME = "python-example-eventhub"
+    NAMESPACE_NAME = "python-example-namespace"
+    STORAGE_ACCOUNT_NAME = "storagesamanvitha1"
+    LOCATION = "South Central US"
+    RETENTION_IN_DAYS = "4"
+    PARTITION_COUNT = "4"
     credential = DefaultAzureCredential()
     subscription_id = os.environ["SUBSCRIPTION_ID"]
     nsg_name = "testnsg"
@@ -29,7 +34,11 @@ def run_deployment(args):
                    os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3)
     print("all vm creation is completed!!\n")
     
-    setup_tcp_connect(VNET_NAME, SUBNET_NAME, args.resource_group, credential, args.key_vault, nsg_name)
+    if args.coonection == "Eventhubs":
+        setup_eventhub_connect(credential, args.resource_group, NAMESPACE_NAME, EVENTHUB_NAME, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
+    elif args.coonection == "TCP":
+        setup_tcp_connect(VNET_NAME, SUBNET_NAME, args.resource_group, credential, args.key_vault, nsg_name)
+    
     print("connection process completed!!\n")
     
     for i in range(len(args.workload_paths)):
