@@ -6,14 +6,14 @@ from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
 from azure.keyvault.secrets import SecretClient
-from azure.core.exceptions import ResourceNotFoundError
 import os
 import subprocess
+import time
 
 def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, nsg_name):
     #create vm with public ip that connects to same vnet and subvnets that the other vms connect to, return public ip address
     location = "westus2"
-    vm_name = "amyVM12"
+    vm_name = "connectvmname4"
     subscription_id = os.environ["SUBSCRIPTION_ID"]
     ip_config_name = vm_name + "ipaddress"
 
@@ -115,10 +115,19 @@ def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, ns
     f = open(f"{vm_name}_key.pem", "w")
     f.write(private_key.decode("utf-8"))
     f.close()
-    FILE = ".\\eng\\grc\\difi_to_udp.py"
+
+    FILE = ".\\..\\eng\\grc\\difi_to_udp.py"
     scp_str = f"scp -i {vm_name}_key.pem -o StrictHostKeyChecking=no {FILE} azureuser@{ip_address_result.ip_address}:/home/azureuser/"
     
-    subprocess.run(scp_str)
+    value_returned = subprocess.run(scp_str)
+    
+    if value_returned.returncode != 0:
+            for j in range(3):
+                if value_returned.returncode != 0:
+                    time.sleep(30)
+                    value_returned = subprocess.run(scp_str)
+                else:
+                    break
 
     return ip_address_result.ip_address
 

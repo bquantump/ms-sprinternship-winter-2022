@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
 from azure.mgmt.keyvault import KeyVaultManagementClient
-from azure.mgmt.keyvault.models import AccessPolicyEntry, Permissions, VaultCreateOrUpdateParameters
+#from azure.mgmt.keyvault.models import AccessPolicyEntry, Permissions, VaultCreateOrUpdateParameters
 from azure.keyvault.secrets import SecretClient
 from azure.core.exceptions import ResourceNotFoundError
 import os
@@ -17,7 +17,7 @@ import time
 
 
 def create_vm(vm_name, location, credential, rg_name, key_vault, object_id, 
-            vnet_name, subnet_name, ip_name, ip_config_name, nic_name, subscription_id):
+            vnet_name, subnet_name, ip_name, ip_config_name, nic_name, subscription_id, nsg_name):
     
     VNET_NAME = vnet_name
     SUBNET_NAME = subnet_name
@@ -38,7 +38,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
         
     # Obtain the management object for networks
     network_client = NetworkManagementClient(credential, subscription_id)
-    nsg = network_client.network_security_groups.begin_create_or_update(rg_name, "testnsg", {'location': location,
+    nsg = network_client.network_security_groups.begin_create_or_update(rg_name, nsg_name, {'location': location,
                                                                                                      "security_rules": [
           {
             "name": "sshrule",
@@ -301,14 +301,14 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
 
 def create_all_vm(workload_names, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
-                    IP_CONFIG_NAME, NIC_NAME, subscription_id, num_retries=3):
+                    IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3):
 
        
     #step 1 workload   
     public_ip_address = []
     private_ip_address = []
     for i in range(len(workload_names)):
-        list = create_vm(workload_names[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
+        list = create_vm(workload_names[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name)
         f = open(f"{workload_names[i]}_key.pem", "w")
         f.write(list[1].decode("utf-8"))
         f.close()
@@ -382,18 +382,20 @@ if __name__ == '__main__':
     IP_NAME = "python-example-ip"
     IP_CONFIG_NAME = "python-example-ip-config"
     NIC_NAME = "python-example-nic"
+    
   
     name = VM_NAME
     location = LOCATION
     rg_name = RESOURCE_GROUP_NAME
     key_vault = VAULT
+    nsg_name = "testnsg"
     
     obj_id = os.environ['OBJECT_ID']
 
 
     #workloads_paths = ""
 
-    ip_adresses = create_all_vm(workloads, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
+    ip_adresses = create_all_vm(workloads, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3)
     print(ip_adresses)
 
     print("Completed!")

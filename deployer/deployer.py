@@ -2,11 +2,11 @@ import argparse
 import sys
 
 from azure.core import credentials
-from deployer import create_all_vm, make_rg_if_does_not_exist
+from deployer import create_all_vm, make_rg_if_does_not_exist, setup_tcp_connect, config_and_run_tb
 from azure.identity import DefaultAzureCredential
 import os
 
-from deployer.runner import config_and_run_tb
+
 
 def run_deployment(args):
     VNET_NAME = "python-example-vnet"
@@ -16,17 +16,26 @@ def run_deployment(args):
     NIC_NAME = "python-example-nic"
     credential = DefaultAzureCredential()
     subscription_id = os.environ["SUBSCRIPTION_ID"]
+    nsg_name = "testnsg"
 
     if len(args.workload_names) != len(args.configs) and len(args.workloads_paths) != len(args.configs):
         raise RuntimeError('length of workloads does not match length of config')
     
         
 
-    #make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
-    #create_all_vm(args.workload_names, args.workload_paths,args.location, credential, args.resource_group, args.key_vault, 
-     #               os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id)
+    make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
+    print("rg making completed!!\n")
+    create_all_vm(args.workload_names, args.workload_paths,args.location, credential, args.resource_group, args.key_vault, 
+                   os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3)
+    print("all vm creation is completed!!\n")
+    
+    setup_tcp_connect(VNET_NAME, SUBNET_NAME, args.resource_group, credential, args.key_vault, nsg_name)
+    print("connection process completed!!\n")
+    
     for i in range(len(args.workload_paths)):
         config_and_run_tb(args.configs[i], args.workload_paths[i])
+        
+    print("config process completed!!\n")
 
     
 
