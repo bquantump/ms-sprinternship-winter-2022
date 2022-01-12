@@ -31,7 +31,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
         vm_result = compute_client.virtual_machines.get(rg_name, vm_name=vm_name)
         print("vm already exists!")
         
-        return None
+        raise RuntimeError()
     except ResourceNotFoundError as e:
         print('resource does not exist, making vm')
         
@@ -295,60 +295,65 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     private_ip_address_result = network_client.network_interfaces.get(rg_name,NIC_NAME).ip_configurations[0].private_ip_address
     
-    return [ip_address_result.ip_address, private_key, private_ip_address_result]
+    return ip_address_result.ip_address, private_key, private_ip_address_result
 
 
 
 
 def create_all_vm(workload_names, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
-                    IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3):
+                    IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, replica=1):
 
        
     #step 1 workload   
-    public_ip_address = []
-    private_ip_address = []
-    for i in range(len(workload_names)):
-        list = create_vm(workload_names[i], location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name)
-        f = open(f"{workload_names[i]}_key.pem", "w")
-        f.write(list[1].decode("utf-8"))
-        f.close()
-       
-        public_ip_address.append(list[0])
-        private_ip_address.append(list[2])
+    for rep_count in range(replica):
+        public_ip_address = []
+        private_ip_address = []
+        for i in range(len(workload_names)):
+            ip_address, private_key, private_ip_address_result = create_vm(workload_names[i] + str(rep_count),
+                                                                          location, credential, rg_name, key_vault, 
+                                                                          obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
+                                                                          IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name)
+            f = open(f"{workload_names[i] + str(rep_count)}_key.pem", "w")
+            f.write(private_key.decode("utf-8"))
+            f.close()
+        
+            public_ip_address.append(ip_address)
+            private_ip_address.append(private_ip_address_result)
 
-    for i in range(len(workload_names)):
-        FILE = workload_paths[i]
-    
-        scp_str = f"scp -i {workload_names[i]}_key.pem -o StrictHostKeyChecking=no {FILE} azureuser@{public_ip_address[i]}:/home/azureuser/"
-        print(scp_str)
+        for i in range(len(workload_names)):
+            FILE = workload_paths[i]
+            w_name = workload_names[i] + str(rep_count)
+            scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {FILE} azureuser@{public_ip_address[i]}:/home/azureuser/"
+            print(scp_str)
+            
+            value_returned = subprocess.run(scp_str)
+            
+            if value_returned.returncode != 0:
+                for _ in range(num_retries):
+                    if value_returned.returncode != 0:
+                        time.sleep(30)
+                        value_returned = subprocess.run(scp_str)
+                    else:
+                        print("good ...")
+                        break
         
-        value_returned = subprocess.run(scp_str)
+            run_command_parameters = {
+            'command_id': 'RunShellScript', # For linux, don't change it
+            'script': [
+                f'cd /home/azureuser && python3 {workload_paths[i]} > workload_log.txt &'
+                ]
+            }
         
-        if value_returned.returncode != 0:
-            for j in range(num_retries):
-                if value_returned.returncode != 0:
-                    time.sleep(30)
-                    value_returned = subprocess.run(scp_str)
-                else:
-                    break
-    
-        run_command_parameters = {
-        'command_id': 'RunShellScript', # For linux, don't change it
-        'script': [
-            f'cd /home/azureuser && python3 {workload_paths[i]} > workload_log.txt &'
-            ]
-        }
-     
-        compute_client = ComputeManagementClient(credential=credential,subscription_id=subscription_id)
+            compute_client = ComputeManagementClient(credential=credential,subscription_id=subscription_id)
 
-        poller = compute_client.virtual_machines.begin_run_command(
-            rg_name,
-            workload_names[i],
-            run_command_parameters);   
-        
-        result = poller.result() 
-        
-        print(result.value[0].message)
+            poller = compute_client.virtual_machines.begin_run_command(
+                rg_name,
+                w_name,
+                run_command_parameters);   
+            
+            result = poller.result() 
+            
+            print(result.value[0].message)
         
     return public_ip_address, private_ip_address
 

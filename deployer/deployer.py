@@ -31,7 +31,8 @@ def run_deployment(args):
     make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
     print("rg making completed!!\n")
     create_all_vm(args.workload_names, args.workload_paths,args.location, credential, args.resource_group, args.key_vault, 
-                   os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3)
+                   os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, 
+                   replica=args.replica if hasattr(args, 'replica') else 1)
     print("all vm creation is completed!!\n")
     
     if args.coonection == "Eventhubs":
@@ -68,7 +69,7 @@ def deployer():
     parser_deploy.add_argument("--workload_names", nargs="+")
     parser_deploy.add_argument('key_vault', type=str)
     parser_deploy.add_argument("--configs", nargs="+")
-
+    parser_deploy.add_argument("--replica",type=int)
     args = parser.parse_args()
     if not vars(args):
         parser.print_usage()
