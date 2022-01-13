@@ -303,7 +303,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 def create_all_vm(workload_names, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
                     IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, replica=1):
 
-       
+    oot_module_script="./eng/scripts/update_oot_module.sh"   
     #step 1 workload   
     for rep_count in range(replica):
         public_ip_address = []
@@ -323,7 +323,7 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
         for i in range(len(workload_names)):
             FILE = workload_paths[i]
             w_name = workload_names[i] + str(rep_count)
-            scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {FILE} azureuser@{public_ip_address[i]}:/home/azureuser/"
+            scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {FILE} {oot_module_script} azureuser@{public_ip_address[i]}:/home/azureuser/"
             print(scp_str)
             
             value_returned = subprocess.run(scp_str)
@@ -340,7 +340,7 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
             run_command_parameters = {
             'command_id': 'RunShellScript', # For linux, don't change it
             'script': [
-                f'cd /home/azureuser && python3 {workload_paths[i]} > workload_log.txt &'
+                f'cd /home/azureuser; ./update_oot_module.sh; cd /home/azureuser; python3 {workload_paths[i]} > workload_log.txt &'
                 ]
             }
         
