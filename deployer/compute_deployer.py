@@ -326,13 +326,13 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
             scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {FILE} {oot_module_script} azureuser@{public_ip_address[i]}:/home/azureuser/"
             print(scp_str)
 
-            value_returned = subprocess.run(scp_str,shell=True)
+            value_returned = subprocess.run(scp_str)
 
             if value_returned.returncode != 0:
                 for _ in range(num_retries):
                     if value_returned.returncode != 0:
                         time.sleep(30)
-                        value_returned = subprocess.run(scp_str,shell=True)
+                        value_returned = subprocess.run(scp_str)
                     else:
                         print("good ...")
                         break
