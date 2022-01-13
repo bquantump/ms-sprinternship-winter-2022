@@ -16,26 +16,26 @@ import subprocess
 import time
 
 
-def create_vm(vm_name, location, credential, rg_name, key_vault, object_id, 
+def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
             vnet_name, subnet_name, ip_name, ip_config_name, nic_name, subscription_id, nsg_name):
-    
+
     VNET_NAME = vnet_name
     SUBNET_NAME = subnet_name
     IP_NAME = vm_name + ip_name
     IP_CONFIG_NAME = vm_name + ip_config_name
     NIC_NAME = vm_name + nic_name
-    
+
     compute_client = ComputeManagementClient(credential, subscription_id)
 
     try:
         vm_result = compute_client.virtual_machines.get(rg_name, vm_name=vm_name)
         print("vm already exists!")
-        
+
         raise RuntimeError()
     except ResourceNotFoundError as e:
         print('resource does not exist, making vm')
-        
-        
+
+
     # Obtain the management object for networks
     network_client = NetworkManagementClient(credential, subscription_id)
     nsg = network_client.network_security_groups.begin_create_or_update(rg_name, nsg_name, {'location': location,
@@ -63,7 +63,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     except ResourceNotFoundError as e:
         print('resource does not exist, making vent')
         make_vnet = True
-        
+
     if make_vnet:
         poller = network_client.virtual_networks.begin_create_or_update(rg_name,
         VNET_NAME,
@@ -87,7 +87,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     # Step 3: Provision the subnet and wait for completion
     if make_subnet:
-        poller = network_client.subnets.begin_create_or_update(rg_name, 
+        poller = network_client.subnets.begin_create_or_update(rg_name,
             VNET_NAME, SUBNET_NAME,
             { "address_prefix": "10.0.0.0/24" }
         )
@@ -111,7 +111,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     print(f"Provisioned public IP address {ip_address_result.name} with address {ip_address_result.ip_address}")
 
     # Step 5: Provision the network interface client
-    poller = network_client.network_interfaces.begin_create_or_update(rg_name, NIC_NAME, 
+    poller = network_client.network_interfaces.begin_create_or_update(rg_name, NIC_NAME,
     {
         "location": location,
         "ip_configurations": [ {
@@ -127,7 +127,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     print(f"Provisioned network interface client {nic_result.name}")
 
-    
+
     key = rsa.generate_private_key(backend=crypto_default_backend(),public_exponent=65537,key_size=2048)
     private_key = key.private_bytes(crypto_serialization.Encoding.PEM,crypto_serialization.PrivateFormat.PKCS8,crypto_serialization.NoEncryption())
     public_key = key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH,crypto_serialization.PublicFormat.OpenSSH)
@@ -135,9 +135,9 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     TENANT_ID = os.environ.get("AZURE_TENANT_ID", None)
     CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", None)
     CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", None)
-    
+
     keyvault_client = KeyVaultManagementClient(credential, subscription_id)
-    
+
     make_vault = False
     try:
         does_exist = keyvault_client.vaults.get(
@@ -147,7 +147,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     except ResourceNotFoundError as e:
         print('resource does not exist, making vault')
         make_vault = True
-        
+
     if make_vault:
         #Create vault
         vault = keyvault_client.vaults.begin_create_or_update(
@@ -239,11 +239,11 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
             }
         ).result()
 
-    
+
     secret_client = SecretClient(vault_url=f"https://{key_vault}.vault.azure.net/", credential=credential)
     set_secret = secret_client.set_secret(f"{vm_name}-private-key", private_key)
     set_secret = secret_client.set_secret(f"{vm_name}-public-key", public_key)
-    
+
     USERNAME = "azureuser"
 
     print(f"Provisioning virtual machine {vm_name}; this operation might take a few minutes.")
@@ -281,7 +281,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
                 "network_interfaces": [{
                     "id": nic_result.id,
                 }]
-            }        
+            }
         }
     )
 
@@ -291,32 +291,32 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     vm_status = vm.statuses[1].display_status
 
     print(f"Provisioned virtual machine {vm_result.name} {vm_status}")
-    
+
 
     private_ip_address_result = network_client.network_interfaces.get(rg_name,NIC_NAME).ip_configurations[0].private_ip_address
-    
+
     return ip_address_result.ip_address, private_key, private_ip_address_result
 
 
 
 
-def create_all_vm(workload_names, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
+def create_all_vm(workload_names, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME,
                     IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, replica=1):
 
-    oot_module_script="./eng/scripts/update_oot_module.sh"   
-    #step 1 workload   
+    oot_module_script=".//eng//scripts//update_oot_module.sh"
+    #step 1 workload
     for rep_count in range(replica):
         public_ip_address = []
         private_ip_address = []
         for i in range(len(workload_names)):
             ip_address, private_key, private_ip_address_result = create_vm(workload_names[i] + str(rep_count),
-                                                                          location, credential, rg_name, key_vault, 
-                                                                          obj_id, VNET_NAME, SUBNET_NAME, IP_NAME, 
+                                                                          location, credential, rg_name, key_vault,
+                                                                          obj_id, VNET_NAME, SUBNET_NAME, IP_NAME,
                                                                           IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name)
             f = open(f"{workload_names[i] + str(rep_count)}_key.pem", "w")
             f.write(private_key.decode("utf-8"))
             f.close()
-        
+
             public_ip_address.append(ip_address)
             private_ip_address.append(private_ip_address_result)
 
@@ -325,42 +325,42 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
             w_name = workload_names[i] + str(rep_count)
             scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {FILE} {oot_module_script} azureuser@{public_ip_address[i]}:/home/azureuser/"
             print(scp_str)
-            
-            value_returned = subprocess.run(scp_str)
-            
+
+            value_returned = subprocess.run(scp_str,shell=True)
+
             if value_returned.returncode != 0:
                 for _ in range(num_retries):
                     if value_returned.returncode != 0:
                         time.sleep(30)
-                        value_returned = subprocess.run(scp_str)
+                        value_returned = subprocess.run(scp_str,shell=True)
                     else:
                         print("good ...")
                         break
-        
+
             run_command_parameters = {
             'command_id': 'RunShellScript', # For linux, don't change it
             'script': [
                 f'cd /home/azureuser; ./update_oot_module.sh; cd /home/azureuser; python3 {workload_paths[i]} > workload_log.txt &'
                 ]
             }
-        
+
             compute_client = ComputeManagementClient(credential=credential,subscription_id=subscription_id)
 
             poller = compute_client.virtual_machines.begin_run_command(
                 rg_name,
                 w_name,
-                run_command_parameters);   
-            
-            result = poller.result() 
-            
+                run_command_parameters);
+
+            result = poller.result()
+
             print(result.value[0].message)
-        
+
     return public_ip_address, private_ip_address
 
 if __name__ == '__main__':
-    
-    workloads = ['newworkload1', 'newworkload2']  
-    workload_paths = ["helloworld.py", "helloworld.py"]  
+
+    workloads = ['newworkload1', 'newworkload2']
+    workload_paths = ["helloworld.py", "helloworld.py"]
     print(f"Provisioning a virtual machine...some operations might take a minute or two.")
 
     credential = DefaultAzureCredential()
@@ -387,14 +387,14 @@ if __name__ == '__main__':
     IP_NAME = "python-example-ip"
     IP_CONFIG_NAME = "python-example-ip-config"
     NIC_NAME = "python-example-nic"
-    
-  
+
+
     name = VM_NAME
     location = LOCATION
     rg_name = RESOURCE_GROUP_NAME
     key_vault = VAULT
     nsg_name = "testnsg"
-    
+
     obj_id = os.environ['OBJECT_ID']
 
 
@@ -405,6 +405,6 @@ if __name__ == '__main__':
 
     print("Completed!")
 
-    
 
-    
+
+
