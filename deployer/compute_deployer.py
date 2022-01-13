@@ -300,10 +300,11 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
 
 
-def create_all_vm(workload_names, workload_paths, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME,
+def create_all_vm(workload_names, workload_paths, workload_configs, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME,
                     IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, replica=1):
 
-    oot_module_script=".//eng//scripts//update_oot_module.sh"
+    oot_module_script=".//..//eng//scripts//update_oot_module.sh"
+    list_of_addresses = []
     #step 1 workload
     for rep_count in range(replica):
         public_ip_address = []
@@ -321,9 +322,12 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
             private_ip_address.append(private_ip_address_result)
 
         for i in range(len(workload_names)):
-            FILE = workload_paths[i]
+            FILE = "runner.py"
+            PY_FILE = workload_paths[i]
+            YAML_FILE = workload_configs[i]
+            
             w_name = workload_names[i] + str(rep_count)
-            scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {FILE} {oot_module_script} azureuser@{public_ip_address[i]}:/home/azureuser/"
+            scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {PY_FILE} {YAML_FILE} {FILE} {oot_module_script} azureuser@{public_ip_address[i]}:/home/azureuser/"
             print(scp_str)
 
             value_returned = subprocess.run(scp_str)
@@ -340,7 +344,7 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
             run_command_parameters = {
             'command_id': 'RunShellScript', # For linux, don't change it
             'script': [
-                f'cd /home/azureuser; chmod +x update_oot_module.sh; ./update_oot_module.sh; cd /home/azureuser; python3 {workload_paths[i]} > workload_log.txt &'
+                f'cd /home/azureuser; chmod +x update_oot_module.sh; ./update_oot_module.sh; cd /home/azureuser; python3 runner.py {workload_paths[i]} {workload_configs[i]} > workload_log.txt &'
                 ]
             }
 
@@ -354,8 +358,10 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
             result = poller.result()
 
             print(result.value[0].message)
-
-    return public_ip_address, private_ip_address
+            
+        list_of_addresses.append((public_ip_address, private_ip_address))
+        
+    return list_of_addresses
 
 if __name__ == '__main__':
 
@@ -371,9 +377,9 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "vmName2"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-amy5" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-samanvitha1" # rename
     LOCATION = "westus2"
-    VAULT = "amyvault5"
+    VAULT = "vaultsamanvitha1"
 
     #Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,

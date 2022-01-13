@@ -12,6 +12,8 @@ import os
 import subprocess
 import time
 
+from deployer.utils import make_difi_to_udp
+
 #from deployer.compute_deployer import RESOURCE_GROUP_NAME
 
 
@@ -78,10 +80,10 @@ def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_name, s
     
     print("eventhub completed!!")
     
-def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, nsg_name):
+def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_name, credential, key_vault, nsg_name):
     #create vm with public ip that connects to same vnet and subvnets that the other vms connect to, return public ip address
     location = "westus2"
-    vm_name = "connectvmname4"
+    vm_name = "connectvmname5"
     subscription_id = os.environ["SUBSCRIPTION_ID"]
     ip_config_name = vm_name + "ipaddress"
 
@@ -176,14 +178,19 @@ def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, ns
 
     vm_result = poller.result()
 
+    
     print(f"Provisioned virtual machine {vm_result.name}")
     
     f = open(f"{vm_name}_key.pem", "w")
     f.write(private_key.decode("utf-8"))
     f.close()
 
-    FILE = ".\\..\\eng\\grc\\difi_to_udp.py"
-    scp_str = f"scp -i {vm_name}_key.pem -o StrictHostKeyChecking=no {FILE} azureuser@{ip_address_result.ip_address}:/home/azureuser/"
+    
+    make_difi_to_udp(first_priv_ip_address_list, ip_address_result.ip_address)
+    FILE = "difi_to_udp.py"
+    oot_module_script=".//..//eng//scripts//update_oot_module.sh"
+    
+    scp_str = f"scp -i {vm_name}_key.pem -o StrictHostKeyChecking=no {FILE} {oot_module_script} azureuser@{ip_address_result.ip_address}:/home/azureuser/"
     
     value_returned = subprocess.run(scp_str)
     
@@ -194,6 +201,24 @@ def setup_tcp_connect(vnet_name, subnet_name, rg_name, credential, key_vault, ns
                     value_returned = subprocess.run(scp_str)
                 else:
                     break
+                
+    run_command_parameters = {
+            'command_id': 'RunShellScript', # For linux, don't change it
+            'script': [
+                f'cd /home/azureuser; chmod +x update_oot_module.sh; ./update_oot_module.sh; cd /home/azureuser; python3 {FILE} > workload_log.txt &'
+                ]
+            }
+
+    compute_client = ComputeManagementClient(credential=credential,subscription_id=subscription_id)
+
+    poller = compute_client.virtual_machines.begin_run_command(
+            rg_name,
+            vm_name,
+            run_command_parameters)   
+        
+    result = poller.result()
+
+    print(result.value[0].message)
 
     return ip_address_result.ip_address
 

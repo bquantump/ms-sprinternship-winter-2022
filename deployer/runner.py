@@ -38,6 +38,7 @@ def config_and_run_tb(config_yml, workload_file) :
     locals()['main']()
 
 if __name__ == '__main__':
-    config_path = os.path.join('..', 'eng', 'sample_configs', 'test_one.yml')
-    workload_path = os.path.join('..', 'eng', 'grc', 'test_file.py')
-    config_and_run_tb(config_path, workload_path)
+    pass
+    #config_path = os.path.join('..', 'eng', 'sample_configs', 'test_one.yml')
+    #workload_path = os.path.join('..', 'eng', 'grc', 'test_file.py')
+    #config_and_run_tb(config_path, workload_path)

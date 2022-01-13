@@ -30,15 +30,21 @@ def run_deployment(args):
 
     make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
     print("rg making completed!!\n")
-    create_all_vm(args.workload_names, args.workload_paths,args.location, credential, args.resource_group, args.key_vault, 
+    list_of_ip_addresses = create_all_vm(args.workload_names, args.workload_paths, args.configs, args.location, credential, args.resource_group, args.key_vault, 
                    os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, 
                    replica=args.replica if hasattr(args, 'replica') else 1)
+    
     print("all vm creation is completed!!\n")
+    
+    first_priv_ip_address_list = []
+    for j in range(args.replica):
+        first_priv_ip_address_list.append(list_of_ip_addresses[j][1][0])
+    
     
     if args.coonection == "Eventhubs":
         setup_eventhub_connect(credential, args.resource_group, NAMESPACE_NAME, EVENTHUB_NAME, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
     elif args.coonection == "TCP":
-        setup_tcp_connect(VNET_NAME, SUBNET_NAME, args.resource_group, credential, args.key_vault, nsg_name)
+        setup_tcp_connect(first_priv_ip_address_list, VNET_NAME, SUBNET_NAME, args.resource_group, credential, args.key_vault, nsg_name)
     
     print("connection process completed!!\n")
     
