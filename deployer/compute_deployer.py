@@ -246,7 +246,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     USERNAME = "azureuser"
 
-    print(f"Provisioning virtual machine {vm_name}; this operation might take a few minutes.")
+    print(f"Provisioning virtual machine {vm_name} this operation might take a few minutes.")
 
     # Provision the VM specifying only minimal arguments, which defaults to an Ubuntu 18.04 VM
     # on a Standard DS1 v2 plan with a public IP address and a default virtual network/subnet.
@@ -340,7 +340,7 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
             run_command_parameters = {
             'command_id': 'RunShellScript', # For linux, don't change it
             'script': [
-                f'cd /home/azureuser; ./update_oot_module.sh; cd /home/azureuser; python3 {workload_paths[i]} > workload_log.txt &'
+                f'cd /home/azureuser; chmod +x update_oot_module.sh; ./update_oot_module.sh; cd /home/azureuser; python3 {workload_paths[i]} > workload_log.txt &'
                 ]
             }
 
@@ -349,7 +349,7 @@ def create_all_vm(workload_names, workload_paths, location, credential, rg_name,
             poller = compute_client.virtual_machines.begin_run_command(
                 rg_name,
                 w_name,
-                run_command_parameters);
+                run_command_parameters)
 
             result = poller.result()
 
@@ -371,9 +371,9 @@ if __name__ == '__main__':
     resource_client = ResourceManagementClient(credential, subscription_id)
     VM_NAME = "vmName2"
 
-    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-amy4" # rename
+    RESOURCE_GROUP_NAME = "PythonAzureExample-VM-rg-amy5" # rename
     LOCATION = "westus2"
-    VAULT = "amyvault4"
+    VAULT = "amyvault5"
 
     #Provision the resource group.
     rg_result = resource_client.resource_groups.create_or_update(RESOURCE_GROUP_NAME,

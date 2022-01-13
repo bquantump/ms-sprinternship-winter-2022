@@ -1,3 +1,5 @@
+#!/bin/sh
+
 git clone https://github.com/microsoft/azure-software-radio.git
 cd azure-software-radio/gr-azure-software-radio
 git checkout d3c9ea2
