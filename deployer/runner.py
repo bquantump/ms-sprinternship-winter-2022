@@ -38,8 +38,7 @@ def config_and_run_tb(argv) :
     print(instance.get_sink_port())
     print(instance.get_sink_ip())
     
-
-    locals()['main']()
+    locals()['main'](instance)
 
 if __name__ == '__main__':
     config_and_run_tb(sys.argv)
