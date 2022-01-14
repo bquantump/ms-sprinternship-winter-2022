@@ -33,12 +33,12 @@ def make_difi_to_udp(forwarding_private_ips, public_ip):
     "    def __init__(self):\n" \
     "        gr.top_block.__init__(self, 'Not titled yet', catch_exceptions=True)\n" \
     "        self.source_port = source_port = 60001\n" \
-    f"        self.source_ip = source_ip = {public_ip}\n" \
+    f"        self.source_ip = source_ip = '{public_ip}'\n" \
     "        self.sink_port = sink_port = 65001\n" \
     "        self.sink_ip = sink_ip = '10.0.0.6'\n" \
     "        self.azure_software_radio_difi_source_cpp_0_0 = azure_software_radio.difi_source_cpp_fc32(source_ip, source_port, 1, 0, int(8), int(0))\n"
     for k, i in enumerate(forwarding_private_ips):
-        base_string += f"        self.udp{k} = network.udp_sink(gr.sizeof_gr_complex, 1, {i}, sink_port, 0, 1472, False)\n"
+        base_string += f"        self.udp{k} = network.udp_sink(gr.sizeof_gr_complex, 1, '{i}', sink_port, 0, 1472, False)\n"
     for k, _ in enumerate(forwarding_private_ips):
         base_string += f"        self.connect((self.azure_software_radio_difi_source_cpp_0_0, 0), (self.udp{k}, 0))\n"
     print(base_string)
