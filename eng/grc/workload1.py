@@ -28,6 +28,18 @@ import numpy as np
 class workload1(gr.top_block):
 
     def __init__(self):
+        from gnuradio import blocks
+        from gnuradio import filter
+        from gnuradio.filter import firdes
+        from gnuradio import gr
+        from gnuradio.fft import window
+        import sys
+        import signal
+        from argparse import ArgumentParser
+        from gnuradio.eng_arg import eng_float, intx
+        from gnuradio import eng_notation
+        from gnuradio import network
+        import numpy as np
         gr.top_block.__init__(self, "Not titled yet", catch_exceptions=True)
 
         ##################################################
