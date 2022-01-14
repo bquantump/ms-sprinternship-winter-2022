@@ -1,8 +1,12 @@
 import os
 import yaml
+import sys
 
-def config_and_run_tb(config_yml, workload_file) :
-
+def config_and_run_tb(argv) :
+    
+    workload_file = sys.argv[1]
+    config_yml = sys.argv[2]
+    
     instance_name = os.path.split(workload_file)[-1]
     instance_name = instance_name.split(".")[0]
     workload_path = os.path.abspath(workload_file)
@@ -38,7 +42,5 @@ def config_and_run_tb(config_yml, workload_file) :
     locals()['main']()
 
 if __name__ == '__main__':
-    pass
-    #config_path = os.path.join('..', 'eng', 'sample_configs', 'test_one.yml')
-    #workload_path = os.path.join('..', 'eng', 'grc', 'test_file.py')
-    #config_and_run_tb(config_path, workload_path)
+    config_and_run_tb(sys.argv)
+    
