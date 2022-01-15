@@ -22,6 +22,8 @@ setup(
         'azure-identity',
         'azure-keyvault',
         'azure-keyvault-secrets',
+        'azure-mgmt-eventhub',
+        'azure-mgmt-storage'
     ],
     packages=['deployer'],
     include_package_data=True,
