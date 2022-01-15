@@ -28,18 +28,6 @@ import azure_software_radio
 class workload2(gr.top_block):
 
     def __init__(self):
-        from gnuradio import analog
-        from gnuradio import blocks
-        from gnuradio import gr
-        from gnuradio.filter import firdes
-        from gnuradio.fft import window
-        import sys
-        import signal
-        from argparse import ArgumentParser
-        from gnuradio.eng_arg import eng_float, intx
-        from gnuradio import eng_notation
-        from gnuradio import network
-        import azure_software_radio
 
         gr.top_block.__init__(self, "Not titled yet", catch_exceptions=True)
 
@@ -107,18 +95,6 @@ class workload2(gr.top_block):
 
 
 def main(tb, options=None):
-    from gnuradio import analog
-    from gnuradio import blocks
-    from gnuradio import gr
-    from gnuradio.filter import firdes
-    from gnuradio.fft import window
-    import sys
-    import signal
-    from argparse import ArgumentParser
-    from gnuradio.eng_arg import eng_float, intx
-    from gnuradio import eng_notation
-    from gnuradio import network
-    import azure_software_radio
     def sig_handler(sig=None, frame=None):
         tb.stop()
         tb.wait()
