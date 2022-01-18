@@ -50,14 +50,15 @@ class workload2(gr.top_block):
         self.blocks_msg_meta_to_pair_0 = blocks.meta_to_pair('squelch_sob','detection!')
         self.blocks_complex_to_mag_0_0 = blocks.complex_to_mag(1)
         self.azure_software_radio_eventhub_sink_0 = azure_software_radio.EventHubSink('connection_string', conn_string, '', '', 'detect', '')
-        self.analog_pwr_squelch_xx_0 = analog.pwr_squelch_ff(2.0, 1, 0, True)
-
+        self.analog_pwr_squelch_xx_0 = analog.pwr_squelch_ff(1.2, 1, 0, True)
+        self.blocks_message_debug_0 = blocks.message_debug(True)
 
 
         ##################################################
         # Connections
         ##################################################
         self.msg_connect((self.blocks_msg_meta_to_pair_0, 'outpair'), (self.azure_software_radio_eventhub_sink_0, 'in'))
+        self.msg_connect((self.blocks_msg_meta_to_pair_0, 'outpair'), (self.blocks_message_debug_0, 'print'))
         self.msg_connect((self.blocks_tagged_stream_to_pdu_0, 'pdus'), (self.blocks_msg_meta_to_pair_0, 'inmeta'))
         self.connect((self.analog_pwr_squelch_xx_0, 0), (self.blocks_stream_to_tagged_stream_0, 0))
         self.connect((self.blocks_complex_to_mag_0_0, 0), (self.blocks_threshold_ff_0, 0))

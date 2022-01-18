@@ -102,14 +102,15 @@ class workload1(gr.top_block):
         self.forwarding_port = forwarding_port = 60002
         self.forwarding_ip = forwarding_ip = '10.0.0.7'
 
+    def make_blocks_and_connections(self):
         ##################################################
         # Blocks
         ##################################################
-        self.network_udp_sink_0 = network.udp_sink(gr.sizeof_gr_complex, 1, forwarding_ip, forwarding_port, 0, 1472, False)
-        self.fft_filter_xxx_0 = filter.fft_filter_ccc(1, np.conjugate(zc_25)[::-1], 1)
+        self.network_udp_sink_0 = network.udp_sink(gr.sizeof_gr_complex, 1, self.forwarding_ip, self.forwarding_port, 0, 1472, False)
+        self.fft_filter_xxx_0 = filter.fft_filter_ccc(1, np.conjugate(self.zc_25)[::-1], 1)
         self.fft_filter_xxx_0.declare_sample_delay(0)
-        self.blocks_vector_source_x_0 = blocks.vector_source_c(zc_25 + [0] * 1000, True, 1, [])
-        self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate,True)
+        self.blocks_vector_source_x_0 = blocks.vector_source_c(self.zc_25 + [0] * 1000, True, 1, [])
+        self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, self.samp_rate,True)
 
 
 
@@ -158,6 +159,7 @@ class workload1(gr.top_block):
 
 
 def main(tb, options=None):
+    tb.make_blocks_and_connections()
     def sig_handler(sig=None, frame=None):
         tb.stop()
         tb.wait()
@@ -170,6 +172,7 @@ def main(tb, options=None):
     tb.start()
 
     try:
+        #tb.wait()
         input('Press Enter to quit: ')
     except EOFError:
         pass

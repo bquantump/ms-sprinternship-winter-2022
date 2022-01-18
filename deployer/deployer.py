@@ -4,7 +4,6 @@ from azure.core import credentials
 from deployer import create_all_vm, make_rg_if_does_not_exist, setup_eventhub_connect, setup_tcp_connect
 from azure.identity import DefaultAzureCredential
 import os
-import yaml
 
 def run_deployment(args):
     VNET_NAME = "python-example-vnet"
@@ -39,28 +38,12 @@ def run_deployment(args):
     for j in range(args.replica):
         first_priv_ip_address_list.append(list_of_ip_addresses[j][1][0])
     
-    forwarding_ip_add = list_of_ip_addresses[0][1][1]
-    
-    config_path = args.configs[0]
-    with open(config_path) as f:
-        dict = yaml.load(f, Loader=yaml.FullLoader)
-    
-    dict['forwarding_ip'] = forwarding_ip_add
-    with open(config_path, 'w') as f:
-        yaml.dump(dict, f)
-    print("yaml loading done!")
-    
     if args.coonection == "Eventhubs":
         setup_eventhub_connect(credential, args.resource_group, NAMESPACE_NAME, EVENTHUB_NAME, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
     elif args.coonection == "TCP":
         setup_tcp_connect(first_priv_ip_address_list, VNET_NAME, SUBNET_NAME, args.resource_group, credential, args.key_vault, nsg_name)
     
     print("connection process completed!!\n")
-    
-    # for i in range(len(args.workload_paths)):
-    #     config_and_run_tb(args.configs[i], args.workload_paths[i])
-        
-    print("config process completed!!\n")
 
     
 

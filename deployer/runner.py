@@ -1,8 +1,7 @@
 import os
 import yaml
 import sys
-
-
+from multiprocessing import Process
 workload_file = sys.argv[1]
 config_yml = sys.argv[2]
 
@@ -29,5 +28,4 @@ with open(config_path) as f:
 for key in dict.keys():
     setattr(instance, key, dict[key])
 print(instance)
-
 locals()['main'](instance)

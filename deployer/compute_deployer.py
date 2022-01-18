@@ -1,5 +1,5 @@
-# Import the needed credential and management objects from the libraries.
 from datetime import time
+from ntpath import realpath
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.network import NetworkManagementClient
@@ -8,12 +8,12 @@ from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
 from azure.mgmt.keyvault import KeyVaultManagementClient
-#from azure.mgmt.keyvault.models import AccessPolicyEntry, Permissions, VaultCreateOrUpdateParameters
 from azure.keyvault.secrets import SecretClient
 from azure.core.exceptions import ResourceNotFoundError
 import os
 import subprocess
 import time
+import yaml
 
 
 def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
@@ -260,7 +260,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
                 }
             },
             "hardware_profile": {
-                "vm_size": "Standard_DS1_v2"
+                "vm_size": "Standard_F8"
             },
             "os_profile": {
                 "computer_name": vm_name,
@@ -303,7 +303,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 def create_all_vm(workload_names, workload_paths, workload_configs, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME,
                     IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, replica=1):
 
-    oot_module_script=".//..//eng//scripts//update_oot_module.sh"
+    oot_module_script=".//..//eng//scripts//install_main.py"
     list_of_addresses = []
     #step 1 workload
     for rep_count in range(replica):
@@ -323,11 +323,18 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
 
         for i in range(len(workload_names)):
             FILE = "runner.py"
+            LAUNCH = 'run.py'
             PY_FILE = workload_paths[i]
             YAML_FILE = workload_configs[i]
-            
+            with open(YAML_FILE) as f:
+                dict = yaml.load(f, Loader=yaml.FullLoader)
+            if 'forwarding_ip' in dict and i != len(workload_names) - 1:
+                dict['forwarding_ip'] = private_ip_address[i + 1]
+            with open(YAML_FILE, 'w') as f:
+                yaml.dump(dict, f)
+            print(f"yaml loading done for {PY_FILE}")
             w_name = workload_names[i] + str(rep_count)
-            scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {PY_FILE} {YAML_FILE} {FILE} {oot_module_script} azureuser@{public_ip_address[i]}:/home/azureuser/"
+            scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {PY_FILE} {YAML_FILE} {FILE} {LAUNCH} {oot_module_script} azureuser@{public_ip_address[i]}:/home/azureuser/"
             print(scp_str)
 
             value_returned = subprocess.run(scp_str)
@@ -340,24 +347,36 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
                     else:
                         print("good ...")
                         break
+            print("\n")
+            print(workload_paths[i])
+            print(workload_configs[i])
+            
+            instance_name_path = os.path.split(workload_paths[i])[-1]
+            instance_name_path = instance_name_path.split(".")[0]
+            instance_yml = os.path.split(workload_configs[i])[-1]
+            instance_yml = instance_yml.split(".")[0]
+            print(instance_name_path)
+            print(instance_yml)
+            
+            # this is to slow, change to run over ssh
+            
+            # run_command_parameters = {
+            # 'command_id': 'RunShellScript', # For linux, don't change it
+            # 'script': [
+            #     f'cd /home/azureuser; python3 install_main.py;tmux new-session -d -s work_sessions \; send-keys "python3 run.py {instance_name_path} {instance_yml}" Enter'
+            #     ]
+            # }
 
-            run_command_parameters = {
-            'command_id': 'RunShellScript', # For linux, don't change it
-            'script': [
-                f'cd /home/azureuser; chmod +x update_oot_module.sh; ./update_oot_module.sh; cd /home/azureuser; python3 runner.py {workload_paths[i]} {workload_configs[i]} > workload_log.txt &'
-                ]
-            }
+            # compute_client = ComputeManagementClient(credential=credential,subscription_id=subscription_id)
 
-            compute_client = ComputeManagementClient(credential=credential,subscription_id=subscription_id)
+            # poller = compute_client.virtual_machines.begin_run_command(
+            #     rg_name,
+            #     w_name,
+            #     run_command_parameters)
 
-            poller = compute_client.virtual_machines.begin_run_command(
-                rg_name,
-                w_name,
-                run_command_parameters)
+            # result = poller.result()
 
-            result = poller.result()
-
-            print(result.value[0].message)
+            #print(result.value[0].message)
             
         list_of_addresses.append((public_ip_address, private_ip_address))
         
