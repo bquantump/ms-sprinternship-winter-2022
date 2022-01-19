@@ -16,12 +16,12 @@ from deployer.utils import make_difi_to_udp
 
 #from deployer.compute_deployer import RESOURCE_GROUP_NAME
 
-
 def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_names, storage_account_name, subscription_id, location, retention_in_days, partition_count):
     
+
     eventhub_client = EventHubManagementClient(credential=credential, subscription_id=subscription_id)
     storage_client = StorageManagementClient(credential=credential, subscription_id=subscription_id)
-    
+
     # Create StorageAccount
     storage_account = storage_client.storage_accounts.begin_create(
         rg_name,
@@ -53,7 +53,7 @@ def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_names, 
         }
     )
     namespace_result = namespace.result()
-    
+
     #create Eventhub
     BODY = {"message_retention_in_days": retention_in_days,
           "partition_count": partition_count,
@@ -89,7 +89,7 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
     ip_config_name = vm_name + "ipaddress"
 
     nic_name = "python-example-nic" + vm_name
-    
+
     compute_client = ComputeManagementClient(credential, subscription_id)
     network_client = NetworkManagementClient(credential, subscription_id)
 
@@ -113,7 +113,7 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
     nsg_id = nsg_result.id
 
     # Step 5: Provision the network interface client
-    poller = network_client.network_interfaces.begin_create_or_update(rg_name, nic_name, 
+    poller = network_client.network_interfaces.begin_create_or_update(rg_name, nic_name,
     {
         "location": location,
         "ip_configurations": [ {
@@ -173,28 +173,27 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
                 "network_interfaces": [{
                     "id": nic_result.id,
                 }]
-            }        
+            }
         }
     )
 
     vm_result = poller.result()
 
-    
+
     print(f"Provisioned virtual machine {vm_result.name}")
-    
+
     f = open(f"{vm_name}_key.pem", "w")
     f.write(private_key.decode("utf-8"))
     f.close()
 
-    
+
     make_difi_to_udp(first_priv_ip_address_list, ip_address_result.ip_address)
     FILE = "difi_to_udp.py"
-    oot_module_script=".//..//eng//scripts//update_oot_module.sh"
-    
-    scp_str = f"scp -i {vm_name}_key.pem -o StrictHostKeyChecking=no {FILE} {oot_module_script} azureuser@{ip_address_result.ip_address}:/home/azureuser/"
-    
+    oot_module_script=os.path.join(os.path.dirname(__file__), '..','eng','scripts','install_main.py')
+
+    scp_str = ['scp', '-i', f'{vm_name}_key.pem', '-o', 'StrictHostKeyChecking=no', f'{FILE}', f'{oot_module_script}', f'azureuser@{ip_address_result.ip_address}:/home/azureuser/']
     value_returned = subprocess.run(scp_str)
-    
+
     if value_returned.returncode != 0:
             for j in range(3):
                 if value_returned.returncode != 0:
@@ -202,11 +201,11 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
                     value_returned = subprocess.run(scp_str)
                 else:
                     break
-                
+
     run_command_parameters = {
             'command_id': 'RunShellScript', # For linux, don't change it
             'script': [
-                f'cd /home/azureuser; chmod +x update_oot_module.sh; ./update_oot_module.sh; cd /home/azureuser; python3 {FILE} > workload_log.txt &'
+                f'cd /home/azureuser; python3 install_main.py d3c9ea2; python3 {FILE} > workload_log.txt &'
                 ]
             }
 
@@ -215,8 +214,8 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
     poller = compute_client.virtual_machines.begin_run_command(
             rg_name,
             vm_name,
-            run_command_parameters)   
-        
+            run_command_parameters)
+
     result = poller.result()
 
     print(result.value[0].message)
@@ -233,7 +232,9 @@ if __name__ == '__main__':
     LOCATION = "South Central US"
     RETENTION_IN_DAYS = "4"
     PARTITION_COUNT = "4"
+
     eventhub_names = ["eventhub_numb0", "eventhub_numb1"]
     
     setup_eventhub_connect(credential, RESOURCE_GROUP_NAME, NAMESPACE_NAME, eventhub_names, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
+
     #setup_tcp_connect("python-example-vnet", "python-example-subnet", "PythonAzureExample-VM-rg-amy4", credential, "amyvault4", "testnsg")

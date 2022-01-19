@@ -14,7 +14,7 @@ setup(
         'pyyaml',
         'wheel',
         'azure-mgmt-resource',
-        'azure.mgmt.keyvault',
+        'azure-mgmt-keyvault',
         'azure-mgmt-compute',
         'azure-mgmt-network',
         'azure-eventhub',
@@ -26,6 +26,8 @@ setup(
         'azure-mgmt-storage'
     ],
     packages=['deployer'],
+    package_data={'':['install_main.py']},
+    data_files=[('eng/scripts',['eng/scripts/install_main.py'])],
     include_package_data=True,
     entry_points={
         'console_scripts': ['grcdeployer=deployer.deployer:deployer']

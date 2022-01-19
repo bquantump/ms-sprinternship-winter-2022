@@ -303,8 +303,11 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 def create_all_vm(workload_names, workload_paths, workload_configs, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME,
                     IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, replica=1):
 
-    oot_module_script=".//..//eng//scripts//install_main.py"
+    oot_module_script=os.path.join(os.path.dirname(__file__),'..','eng','scripts','install_main.py')
     list_of_addresses = []
+    FILE = os.path.join(os.path.dirname(__file__),'runner.py')
+    LAUNCH = os.path.join(os.path.dirname(__file__),'run.py')
+
     #step 1 workload
     for rep_count in range(replica):
         public_ip_address = []
@@ -322,8 +325,6 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             private_ip_address.append(private_ip_address_result)
 
         for i in range(len(workload_names)):
-            FILE = "runner.py"
-            LAUNCH = 'run.py'
             PY_FILE = workload_paths[i]
             YAML_FILE = workload_configs[i]
             with open(YAML_FILE) as f:
@@ -334,7 +335,7 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
                 yaml.dump(dict, f)
             print(f"yaml loading done for {PY_FILE}")
             w_name = workload_names[i] + str(rep_count)
-            scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {PY_FILE} {YAML_FILE} {FILE} {LAUNCH} {oot_module_script} azureuser@{public_ip_address[i]}:/home/azureuser/"
+            scp_str=['scp', '-i', f'{w_name}_key.pem', '-o', 'StrictHostKeyChecking=no', f'{PY_FILE}', f'{YAML_FILE}', f'{FILE}', f'{LAUNCH}', f'{oot_module_script}', f'azureuser@{public_ip_address[i]}:/home/azureuser']
             print(scp_str)
 
             value_returned = subprocess.run(scp_str)
@@ -350,16 +351,16 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             print("\n")
             print(workload_paths[i])
             print(workload_configs[i])
-            
+
             instance_name_path = os.path.split(workload_paths[i])[-1]
             instance_name_path = instance_name_path.split(".")[0]
             instance_yml = os.path.split(workload_configs[i])[-1]
             instance_yml = instance_yml.split(".")[0]
             print(instance_name_path)
             print(instance_yml)
-            
+
             # this is to slow, change to run over ssh
-            
+
             # run_command_parameters = {
             # 'command_id': 'RunShellScript', # For linux, don't change it
             # 'script': [
@@ -377,9 +378,9 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             # result = poller.result()
 
             #print(result.value[0].message)
-            
+
         list_of_addresses.append((public_ip_address, private_ip_address))
-        
+
     return list_of_addresses
 
 if __name__ == '__main__':
