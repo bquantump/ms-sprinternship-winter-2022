@@ -1,0 +1,4 @@
+conn_string: Endpoint=sb://hackathon2021.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=9IusLL3aVlo/DCHH/cI9Vkt+IF6PxnT/RByAXfRO6oM=
+freq: Endpoint=sb://hackathon2021.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=9IusLL3aVlo/DCHH/cI9Vkt+IF6PxnT/RByAXfRO6oM=
+rec_port: 63332
+samp_rate: 22222
