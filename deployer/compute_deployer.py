@@ -51,6 +51,19 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
               "priority": 130,
               "direction": "Inbound"
             }
+          },
+          {
+            "name": "TCP",
+            "properties": {
+              "protocol": "TCP",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "destinationPortRange": "*",
+              "sourcePortRange": "*",
+              "priority": 100,
+              "direction": "Inbound"
+            }
           }
         ]})
     nsg_id = nsg.result().as_dict()['id']
@@ -324,18 +337,18 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             f = open(f"{workload_names[i] + str(rep_count)}_key.pem", "w")
             f.write(private_key.decode("utf-8"))
             f.close()
-        
+
             public_ip_address.append(ip_address)
             private_ip_address.append(private_ip_address_result)
 
         for i in range(len(workload_names)):
-            
+
             if yaml_index == len(workload_configs):
                 yaml_index = 0
-                
+
             PY_FILE = workload_paths[yaml_index]
             YAML_FILE = workload_configs[yaml_index]
-            
+
             with open(YAML_FILE) as f:
                 dict = yaml.load(f, Loader=yaml.FullLoader)
             if 'forwarding_ip' in dict and i != len(workload_names) - 1:
@@ -360,7 +373,7 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             print("\n")
             print(workload_paths[yaml_index])
             print(workload_configs[yaml_index])
-            
+
             instance_name_path = os.path.split(workload_paths[yaml_index])[-1]
             instance_name_path = instance_name_path.split(".")[0]
             instance_yml = os.path.split(workload_configs[yaml_index])[-1]
@@ -371,7 +384,7 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             subprocess.check_call(cmd, shell=True)
 
             yaml_index += 1
-            
+
         list_of_addresses.append((public_ip_address, private_ip_address))
 
     return list_of_addresses
