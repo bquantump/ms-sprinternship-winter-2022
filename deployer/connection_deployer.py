@@ -17,7 +17,7 @@ from deployer.utils import make_difi_to_udp
 #from deployer.compute_deployer import RESOURCE_GROUP_NAME
 
 
-def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_name, storage_account_name, subscription_id, location, retention_in_days, partition_count):
+def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_names, storage_account_name, subscription_id, location, retention_in_days, partition_count):
     
     eventhub_client = EventHubManagementClient(credential=credential, subscription_id=subscription_id)
     storage_client = StorageManagementClient(credential=credential, subscription_id=subscription_id)
@@ -71,14 +71,15 @@ def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_name, s
             }
           }
     }
-            
-    eventhub = eventhub_client.event_hubs.create_or_update(
-        rg_name,
-        namespace_name,
-        eventhub_name,
-        BODY)
-    
-    print("eventhub completed!!")
+
+    for j in range(len(eventhub_names)):
+        eventhub = eventhub_client.event_hubs.create_or_update(
+            rg_name,
+            namespace_name,
+            eventhub_names[j],
+            BODY)
+
+    return eventhub_names
     
 def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_name, credential, key_vault, nsg_name):
     #create vm with public ip that connects to same vnet and subvnets that the other vms connect to, return public ip address
@@ -226,12 +227,13 @@ if __name__ == '__main__':
     credential = DefaultAzureCredential()
     subscription_id = os.environ["SUBSCRIPTION_ID"]
     RESOURCE_GROUP_NAME = "samanvitha6"
-    EVENTHUB_NAME = "python-example-eventhub"
+    #eventhub_names = "python-example-eventhub"
     NAMESPACE_NAME = "python-example-namespace"
     STORAGE_ACCOUNT_NAME = "storagesamanvitha1"
     LOCATION = "South Central US"
     RETENTION_IN_DAYS = "4"
     PARTITION_COUNT = "4"
+    eventhub_names = ["eventhub_numb0", "eventhub_numb1"]
     
-    setup_eventhub_connect(credential, RESOURCE_GROUP_NAME, NAMESPACE_NAME, EVENTHUB_NAME, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
+    setup_eventhub_connect(credential, RESOURCE_GROUP_NAME, NAMESPACE_NAME, eventhub_names, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
     #setup_tcp_connect("python-example-vnet", "python-example-subnet", "PythonAzureExample-VM-rg-amy4", credential, "amyvault4", "testnsg")

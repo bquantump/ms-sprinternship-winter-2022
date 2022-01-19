@@ -2,6 +2,8 @@ import os
 import yaml
 import sys
 from multiprocessing import Process
+
+
 workload_file = sys.argv[1]
 config_yml = sys.argv[2]
 
@@ -24,6 +26,7 @@ config_path = os.path.abspath(config_yml)
 
 with open(config_path) as f:
     dict = yaml.load(f, Loader=yaml.FullLoader)
+
 
 for key in dict.keys():
     setattr(instance, key, dict[key])

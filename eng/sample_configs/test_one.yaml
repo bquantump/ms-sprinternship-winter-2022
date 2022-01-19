@@ -1,4 +1,6 @@
-source_port: 59589
-source_ip: 67676
-sink_port: 5445
 sink_ip: 3232
+sink_port: 5445
+source_ip: 67676
+source_port: 59589
+topic0: eventhub_topic0
+topic1: eventhub_topic1

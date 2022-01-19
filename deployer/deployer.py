@@ -1,4 +1,5 @@
 import argparse
+import yaml
 import sys
 from azure.core import credentials
 from deployer import create_all_vm, make_rg_if_does_not_exist, setup_eventhub_connect, setup_tcp_connect
@@ -11,7 +12,7 @@ def run_deployment(args):
     IP_NAME = "python-example-ip"
     IP_CONFIG_NAME = "python-example-ip-config"
     NIC_NAME = "python-example-nic"
-    EVENTHUB_NAME = "python-example-eventhub"
+    #EVENTHUB_NAME = "python-example-eventhub"
     NAMESPACE_NAME = "python-example-namespace"
     STORAGE_ACCOUNT_NAME = "storagesamanvitha1"
     LOCATION = "South Central US"
@@ -21,8 +22,8 @@ def run_deployment(args):
     subscription_id = os.environ["SUBSCRIPTION_ID"]
     nsg_name = "testnsg"
     
-    if len(args.workload_names) != len(args.configs) and len(args.workloads_paths) != len(args.configs):
-        raise RuntimeError('length of workloads does not match length of config')
+    if len(args.workload_names) != len(args.configs) and len(args.workloads_paths) != len(args.configs) and len(args.workload_names) != len(args.eventhub_names):
+        raise RuntimeError('length of workloads does not match length of config or eventhubs!')
     
         
 
@@ -38,14 +39,34 @@ def run_deployment(args):
     for j in range(args.replica):
         first_priv_ip_address_list.append(list_of_ip_addresses[j][1][0])
     
-    if args.coonection == "Eventhubs":
-        setup_eventhub_connect(credential, args.resource_group, NAMESPACE_NAME, EVENTHUB_NAME, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
-    elif args.coonection == "TCP":
+    if args.connection == "EventHubs":
+        eventhub_list = setup_eventhub_connect(credential, args.resource_group, NAMESPACE_NAME, args.eventhub_names, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
+        print("eventhub created!!")
+       
+        temp_list = []
+
+        for j in range(len(eventhub_list)):
+            temp_list.append('topic'+str(j))
+            temp_list.append(eventhub_list[j])
+
+        dict = ConvertToDictionary(temp_list)
+
+        #take in configs paths
+        configs_list = args.configs
+
+        for i in range(len(configs_list)):
+            with open(configs_list[i], 'a+') as file:
+                documents = yaml.dump(dict, file)
+
+
+    elif args.connection == "TCP":
         setup_tcp_connect(first_priv_ip_address_list, VNET_NAME, SUBNET_NAME, args.resource_group, credential, args.key_vault, nsg_name)
     
     print("connection process completed!!\n")
 
-    
+def ConvertToDictionary(lst):
+    res_dct = {lst[i]: lst[i + 1] for i in range(0, len(lst), 2)}
+    return res_dct
 
 def deployer():
     parser = argparse.ArgumentParser(prog='deployer')
@@ -58,7 +79,7 @@ def deployer():
     compute_choices = ['AKS', 'VM']
     connection_choices = ["EventHubs", "TCP"]
     parser_deploy.add_argument("compute", type=str, choices=compute_choices)
-    parser_deploy.add_argument("coonection", type=str, choices=connection_choices)
+    parser_deploy.add_argument("connection", type=str, choices=connection_choices)
     parser_deploy.set_defaults(func=run_deployment)
 
     parser_deploy.add_argument('resource_group', type=str)
@@ -68,6 +89,8 @@ def deployer():
     parser_deploy.add_argument('key_vault', type=str)
     parser_deploy.add_argument("--configs", nargs="+")
     parser_deploy.add_argument("--replica",type=int)
+    parser_deploy.add_argument("--eventhub_names", nargs="+")
+
     args = parser.parse_args()
     if not vars(args):
         parser.print_usage()
