@@ -306,9 +306,9 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
     list_of_addresses = []
     yaml_index = 0
     #copy creds over to VM
-    #cmd_creds =  f'export AZURE_TENANT_ID = "{os.environ["AZURE_TENANT_ID"]}"'
-    #cmd_creds = f'export AZURE_TENANT_ID = "{os.environ["AZURE_TENANT_ID"]}" ; ' + f'export AZURE_CLIENT_ID = {os.environ["AZURE_CLIENT_ID"]} ; ' + f'export AZURE_CLIENT_SECRET = {os.environ["AZURE_CLIENT_SECRET"]} ; ' + f'export AZURE_SUBSCRIPTION_ID = {os.environ["SUBSCRIPTION_ID"]} ; ' + f'export OBJECT_ID = {os.environ["OBJECT_ID"]}'
-                
+    cmd_creds =  f'export AZURE_TENANT_ID={os.environ["AZURE_TENANT_ID"]}; ' + f'export AZURE_CLIENT_ID={os.environ["AZURE_CLIENT_ID"]}; '\
+        + f'export AZURE_CLIENT_SECRET={os.environ["AZURE_CLIENT_SECRET"]}; ' + f'export AZURE_SUBSCRIPTION_ID={os.environ["SUBSCRIPTION_ID"]}'
+
     FILE = os.path.join(os.path.dirname(__file__),'runner.py')
     LAUNCH = os.path.join(os.path.dirname(__file__),'run.py')
 
@@ -329,8 +329,6 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             private_ip_address.append(private_ip_address_result)
 
         for i in range(len(workload_names)):
-            FILE = "runner.py"
-            LAUNCH = 'run.py'
             
             if yaml_index == len(workload_configs):
                 yaml_index = 0
@@ -369,9 +367,8 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             instance_yml = instance_yml.split(".")[0]
             print(instance_name_path)
             print(instance_yml)
-            
-            cmd = f'ssh -i {w_name}_key.pem azureuser@{public_ip_address[i]} ; "python3 install_main.py;tmux new-session -d -s work_sessions \; send-keys \"python3 run.py {instance_name_path} {instance_yml}\" Enter"'
-            subprocess.run(cmd, shell=True)
+            cmd = f'ssh -i {w_name}_key.pem azureuser@{public_ip_address[i]} \"{cmd_creds}; python3 install_main.py && tmux new-session -d -s work_sessions \; send-keys \'python3 run.py {instance_name_path} {instance_yml}\' Enter\"'
+            subprocess.check_call(cmd, shell=True)
 
             yaml_index += 1
             
