@@ -302,13 +302,16 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 def create_all_vm(workload_names, workload_paths, workload_configs, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME,
                     IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, replica=1):
 
-    oot_module_script=".//..//eng//scripts//install_main.py"
+    oot_module_script=os.path.join(os.path.dirname(__file__),'..','eng','scripts','install_main.py')
     list_of_addresses = []
     yaml_index = 0
     #copy creds over to VM
     #cmd_creds =  f'export AZURE_TENANT_ID = "{os.environ["AZURE_TENANT_ID"]}"'
     #cmd_creds = f'export AZURE_TENANT_ID = "{os.environ["AZURE_TENANT_ID"]}" ; ' + f'export AZURE_CLIENT_ID = {os.environ["AZURE_CLIENT_ID"]} ; ' + f'export AZURE_CLIENT_SECRET = {os.environ["AZURE_CLIENT_SECRET"]} ; ' + f'export AZURE_SUBSCRIPTION_ID = {os.environ["SUBSCRIPTION_ID"]} ; ' + f'export OBJECT_ID = {os.environ["OBJECT_ID"]}'
                 
+    FILE = os.path.join(os.path.dirname(__file__),'runner.py')
+    LAUNCH = os.path.join(os.path.dirname(__file__),'run.py')
+
     #step 1 workload
     for rep_count in range(replica):
         public_ip_address = []
@@ -343,7 +346,7 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
                 yaml.dump(dict, f)
             print(f"yaml loading done for {PY_FILE}")
             w_name = workload_names[i] + str(rep_count)
-            scp_str = f"scp -i {w_name}_key.pem -o StrictHostKeyChecking=no {PY_FILE} {YAML_FILE} {FILE} {LAUNCH} {oot_module_script} azureuser@{public_ip_address[i]}:/home/azureuser/"
+            scp_str=['scp', '-i', f'{w_name}_key.pem', '-o', 'StrictHostKeyChecking=no', f'{PY_FILE}', f'{YAML_FILE}', f'{FILE}', f'{LAUNCH}', f'{oot_module_script}', f'azureuser@{public_ip_address[i]}:/home/azureuser']
             print(scp_str)
 
             value_returned = subprocess.run(scp_str)
@@ -373,7 +376,7 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             yaml_index += 1
             
         list_of_addresses.append((public_ip_address, private_ip_address))
-        
+
     return list_of_addresses
 
 if __name__ == '__main__':
