@@ -51,6 +51,19 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
               "priority": 130,
               "direction": "Inbound"
             }
+          },
+          {
+            "name": "TCP",
+            "properties": {
+              "protocol": "TCP",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "destinationPortRange": "*",
+              "sourcePortRange": "*",
+              "priority": 100,
+              "direction": "Inbound"
+            }
           }
         ]})
     nsg_id = nsg.result().as_dict()['id']
@@ -305,9 +318,9 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
     oot_module_script=os.path.join(os.path.dirname(__file__),'..','eng','scripts','install_main.py')
     list_of_addresses = []
     #copy creds over to VM
-    #cmd_creds =  f'export AZURE_TENANT_ID = "{os.environ["AZURE_TENANT_ID"]}"'
-    #cmd_creds = f'export AZURE_TENANT_ID = "{os.environ["AZURE_TENANT_ID"]}" ; ' + f'export AZURE_CLIENT_ID = {os.environ["AZURE_CLIENT_ID"]} ; ' + f'export AZURE_CLIENT_SECRET = {os.environ["AZURE_CLIENT_SECRET"]} ; ' + f'export AZURE_SUBSCRIPTION_ID = {os.environ["SUBSCRIPTION_ID"]} ; ' + f'export OBJECT_ID = {os.environ["OBJECT_ID"]}'
-                
+    cmd_creds =  f'export AZURE_TENANT_ID={os.environ["AZURE_TENANT_ID"]}; ' + f'export AZURE_CLIENT_ID={os.environ["AZURE_CLIENT_ID"]}; '\
+        + f'export AZURE_CLIENT_SECRET={os.environ["AZURE_CLIENT_SECRET"]}; ' + f'export AZURE_SUBSCRIPTION_ID={os.environ["SUBSCRIPTION_ID"]}'
+
     FILE = os.path.join(os.path.dirname(__file__),'runner.py')
     LAUNCH = os.path.join(os.path.dirname(__file__),'run.py')
 
@@ -323,7 +336,7 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             f = open(f"{workload_names[i] + str(rep_count)}_key.pem", "w")
             f.write(private_key.decode("utf-8"))
             f.close()
-        
+
             public_ip_address.append(ip_address)
             private_ip_address.append(private_ip_address_result)
 
@@ -361,8 +374,7 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             instance_yml = os.path.split(workload_configs[rep_count][i])[-1]
             print(instance_name_path)
             print(instance_yml)
-            cmd = f'ssh -i {w_name}_key.pem azureuser@{public_ip_address[i]} \"python3 install_main.py && tmux new-session -d -s work_sessions \; send-keys \'python3 run.py {instance_name_path} {instance_yml}\' Enter\"'
-            print(f"running: {cmd}")
+            cmd = f'ssh -i {w_name}_key.pem azureuser@{public_ip_address[i]} \"{cmd_creds}; python3 install_main.py && tmux new-session -d -s work_sessions \; send-keys \'python3 run.py {instance_name_path} {instance_yml}\' Enter\"'
             subprocess.check_call(cmd, shell=True)
             
         list_of_addresses.append((public_ip_address, private_ip_address))
