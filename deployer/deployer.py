@@ -22,14 +22,18 @@ def run_deployment(args):
     subscription_id = os.environ["SUBSCRIPTION_ID"]
     nsg_name = "testnsg"
     
-    if len(args.workload_names) != len(args.configs) and len(args.workloads_paths) != len(args.configs) and len(args.workload_names) != len(args.eventhub_names):
+    if args.replica * len(args.workload_names) != len(args.configs):
         raise RuntimeError('length of workloads does not match length of config or eventhubs!')
-    
         
-
+    configs = []
+    for replica in range(args.replica):
+        configs.append([])
+        for workload in range(len(args.workload_names)):
+            configs[replica].append(args.configs[replica * workload])
+    
     make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
     print("rg making completed!!\n")
-    list_of_ip_addresses = create_all_vm(args.workload_names, args.workload_paths, args.configs, args.location, credential, args.resource_group, args.key_vault, 
+    list_of_ip_addresses = create_all_vm(args.workload_names, args.workload_paths, configs, args.location, credential, args.resource_group, args.key_vault, 
                    os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, 
                    replica=args.replica if hasattr(args, 'replica') else 1)
     print(list_of_ip_addresses)
