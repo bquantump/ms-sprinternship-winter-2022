@@ -17,7 +17,7 @@ from deployer.utils import make_difi_to_udp
 #from deployer.compute_deployer import RESOURCE_GROUP_NAME
 
 def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_names, storage_account_name, subscription_id, location, retention_in_days, partition_count):
-    
+
 
     eventhub_client = EventHubManagementClient(credential=credential, subscription_id=subscription_id)
     storage_client = StorageManagementClient(credential=credential, subscription_id=subscription_id)
@@ -80,7 +80,7 @@ def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_names, 
             BODY)
 
     return eventhub_names
-    
+
 def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_name, credential, key_vault, nsg_name):
     #create vm with public ip that connects to same vnet and subvnets that the other vms connect to, return public ip address
     location = "westus2"
@@ -202,7 +202,7 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
                 else:
                     break
 
-    cmd = f'ssh -i {vm_name}_key.pem azureuser@{ip_address_result.ip_address} \"python3 install_main.py d3c9ea2 \'python3 {FILE} > workload_log.txt &\' Enter\"'
+    cmd = f'ssh -i {vm_name}_key.pem azureuser@{ip_address_result.ip_address} \"python3 install_main.py difi_tcp \'python3 {FILE} > workload_log.txt &\' Enter\"'
     print(f"running: {cmd}")
     subprocess.check_call(cmd, shell=True)
 
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     PARTITION_COUNT = "4"
 
     eventhub_names = ["eventhub_numb0", "eventhub_numb1"]
-    
+
     setup_eventhub_connect(credential, RESOURCE_GROUP_NAME, NAMESPACE_NAME, eventhub_names, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
 
     #setup_tcp_connect("python-example-vnet", "python-example-subnet", "PythonAzureExample-VM-rg-amy4", credential, "amyvault4", "testnsg")
