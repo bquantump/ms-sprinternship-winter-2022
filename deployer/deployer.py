@@ -26,7 +26,6 @@ def run_deployment(args):
         raise RuntimeError('length of workloads does not match length of config or eventhubs!')
         
     configs = []
-    
     for replica in range(args.replica):
         configs.append([])
         for workload in range(len(args.workload_names)):
