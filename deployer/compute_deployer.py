@@ -15,7 +15,6 @@ import subprocess
 import time
 import yaml
 
-
 def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
             vnet_name, subnet_name, ip_name, ip_config_name, nic_name, subscription_id, nsg_name):
 
@@ -305,6 +304,11 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
 
     oot_module_script=".//..//eng//scripts//install_main.py"
     list_of_addresses = []
+    yaml_index = 0
+    #copy creds over to VM
+    #cmd_creds =  f'export AZURE_TENANT_ID = "{os.environ["AZURE_TENANT_ID"]}"'
+    #cmd_creds = f'export AZURE_TENANT_ID = "{os.environ["AZURE_TENANT_ID"]}" ; ' + f'export AZURE_CLIENT_ID = {os.environ["AZURE_CLIENT_ID"]} ; ' + f'export AZURE_CLIENT_SECRET = {os.environ["AZURE_CLIENT_SECRET"]} ; ' + f'export AZURE_SUBSCRIPTION_ID = {os.environ["SUBSCRIPTION_ID"]} ; ' + f'export OBJECT_ID = {os.environ["OBJECT_ID"]}'
+                
     #step 1 workload
     for rep_count in range(replica):
         public_ip_address = []
@@ -317,15 +321,20 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
             f = open(f"{workload_names[i] + str(rep_count)}_key.pem", "w")
             f.write(private_key.decode("utf-8"))
             f.close()
-
+        
             public_ip_address.append(ip_address)
             private_ip_address.append(private_ip_address_result)
 
         for i in range(len(workload_names)):
             FILE = "runner.py"
             LAUNCH = 'run.py'
-            PY_FILE = workload_paths[i]
-            YAML_FILE = workload_configs[i]
+            
+            if yaml_index == len(workload_configs):
+                yaml_index = 0
+                
+            PY_FILE = workload_paths[yaml_index]
+            YAML_FILE = workload_configs[yaml_index]
+            
             with open(YAML_FILE) as f:
                 dict = yaml.load(f, Loader=yaml.FullLoader)
             if 'forwarding_ip' in dict and i != len(workload_names) - 1:
@@ -348,35 +357,20 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
                         print("good ...")
                         break
             print("\n")
-            print(workload_paths[i])
-            print(workload_configs[i])
+            print(workload_paths[yaml_index])
+            print(workload_configs[yaml_index])
             
-            instance_name_path = os.path.split(workload_paths[i])[-1]
+            instance_name_path = os.path.split(workload_paths[yaml_index])[-1]
             instance_name_path = instance_name_path.split(".")[0]
-            instance_yml = os.path.split(workload_configs[i])[-1]
+            instance_yml = os.path.split(workload_configs[yaml_index])[-1]
             instance_yml = instance_yml.split(".")[0]
             print(instance_name_path)
             print(instance_yml)
             
-            # this is to slow, change to run over ssh
-            
-            # run_command_parameters = {
-            # 'command_id': 'RunShellScript', # For linux, don't change it
-            # 'script': [
-            #     f'cd /home/azureuser; python3 install_main.py;tmux new-session -d -s work_sessions \; send-keys "python3 run.py {instance_name_path} {instance_yml}" Enter'
-            #     ]
-            # }
+            cmd = f'ssh -i {w_name}_key.pem azureuser@{public_ip_address[i]} ; "python3 install_main.py;tmux new-session -d -s work_sessions \; send-keys \"python3 run.py {instance_name_path} {instance_yml}\" Enter"'
+            subprocess.run(cmd, shell=True)
 
-            # compute_client = ComputeManagementClient(credential=credential,subscription_id=subscription_id)
-
-            # poller = compute_client.virtual_machines.begin_run_command(
-            #     rg_name,
-            #     w_name,
-            #     run_command_parameters)
-
-            # result = poller.result()
-
-            #print(result.value[0].message)
+            yaml_index += 1
             
         list_of_addresses.append((public_ip_address, private_ip_address))
         
