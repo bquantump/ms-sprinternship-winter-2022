@@ -9,3 +9,6 @@ cd = f'cd azure-software-radio/gr-azure-software-radio; git checkout {branch};' 
 
 subprocess.check_call(clone, shell=True)
 subprocess.check_call(cd, shell=True)
+
+clone_hack = 'git clone https://github.com/bquantump/hackathon2021.git; cd hackathon2021/dsp; pip3 install -e . '
+subprocess.check_call(clone_hack, shell=True)
