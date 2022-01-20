@@ -201,8 +201,7 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
                     value_returned = subprocess.run(scp_str)
                 else:
                     break
-
-    cmd = f'ssh -i {vm_name}_key.pem azureuser@{ip_address_result.ip_address} \"python3 install_main.py difi_tcp \'python3 {FILE} > workload_log.txt &\' Enter\"'
+    cmd = f'ssh -i {vm_name}_key.pem azureuser@{ip_address_result.ip_address} \"python3 install_main.py difi_tcp && tmux new-session -d -s work_sessions \; send-keys \'python3 {FILE}\' Enter\"'
     print(f"running: {cmd}")
     subprocess.check_call(cmd, shell=True)
 

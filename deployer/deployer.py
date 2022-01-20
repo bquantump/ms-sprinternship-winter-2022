@@ -29,8 +29,9 @@ def run_deployment(args):
     for replica in range(args.replica):
         configs.append([])
         for workload in range(len(args.workload_names)):
-            configs[replica].append(args.configs[replica * workload])
-    
+            configs[replica].append(args.configs[(replica + 1) * workload])
+    print(configs)
+    print("\n")
     make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
     print("rg making completed!!\n")
     list_of_ip_addresses = create_all_vm(args.workload_names, args.workload_paths, configs, args.location, credential, args.resource_group, args.key_vault, 

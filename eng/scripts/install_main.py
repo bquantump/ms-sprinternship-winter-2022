@@ -12,3 +12,5 @@ subprocess.check_call(cd, shell=True)
 
 clone_hack = 'git clone https://github.com/bquantump/hackathon2021.git; cd hackathon2021/dsp; pip3 install -e . '
 subprocess.check_call(clone_hack, shell=True)
+install_oot_hack = 'cd hackathon2021/gr-eventhubs; git checkout demo; mkdir build; cd build; cmake ..; sudo make install -j'
+subprocess.check_call(install_oot_hack, shell=True)

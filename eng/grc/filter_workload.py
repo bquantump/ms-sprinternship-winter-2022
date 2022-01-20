@@ -22,11 +22,9 @@ from gnuradio import network
 import dspcore
 import numpy as np
 import os
-c
 
 
-
-class filter_sig(gr.top_block):
+class filter_workload(gr.top_block):
 
     def __init__(self):
         gr.top_block.__init__(self, "Not titled yet", catch_exceptions=True)
@@ -120,7 +118,7 @@ class filter_sig(gr.top_block):
 
 
 def main(tb):
-    tb.make_blocks_and_connections()
+    tb.make_blocks_and_connects()
     def sig_handler(sig=None, frame=None):
         tb.stop()
         tb.wait()
@@ -138,7 +136,3 @@ def main(tb):
         pass
     tb.stop()
     tb.wait()
-
-
-if __name__ == '__main__':
-    main()

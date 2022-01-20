@@ -27,7 +27,7 @@ import numpy as np
 
 
 
-class detect(gr.top_block):
+class detect_workload(gr.top_block):
 
     def __init__(self):
         gr.top_block.__init__(self, "Not titled yet", catch_exceptions=True)
@@ -114,7 +114,3 @@ def main(tb):
         pass
     tb.stop()
     tb.wait()
-
-
-if __name__ == '__main__':
-    main()

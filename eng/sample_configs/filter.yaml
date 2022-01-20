@@ -1,5 +1,5 @@
 ZC_ROOT: 25
 chan_num: 0
-rec_port: 60000
+forwarding_ip: 10.0.0.5
 forwarding_port: 60005
-forwarding_ip: "127.0.0.1"
+rec_port: 65001
