@@ -272,7 +272,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
                 }
             },
             "hardware_profile": {
-                "vm_size": "Standard_F8"
+                "vm_size": "Standard_F4"
             },
             "os_profile": {
                 "computer_name": vm_name,
@@ -344,9 +344,11 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
                 
             PY_FILE = workload_paths[i]
             YAML_FILE = workload_configs[rep_count][i]
-            
+            print("yaml file is \n")
+            print(YAML_FILE)
             with open(YAML_FILE) as f:
                 dict = yaml.load(f, Loader=yaml.FullLoader)
+            print(f'dict is {dict}')
             if 'forwarding_ip' in dict and i != len(workload_names) - 1:
                 dict['forwarding_ip'] = private_ip_address[i + 1]
             with open(YAML_FILE, 'w') as f:

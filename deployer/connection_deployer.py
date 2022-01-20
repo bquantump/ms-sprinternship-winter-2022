@@ -152,7 +152,7 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
                 }
             },
             "hardware_profile": {
-                "vm_size": "Standard_DS1_v2"
+                "vm_size": "Standard_F8"
             },
             "os_profile": {
                 "computer_name": vm_name,

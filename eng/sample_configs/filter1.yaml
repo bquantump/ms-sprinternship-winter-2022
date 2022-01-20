@@ -1,0 +1,5 @@
+ZC_ROOT: 25
+chan_num: 2
+forwarding_ip: 10.0.0.7
+forwarding_port: 60005
+rec_port: 65001

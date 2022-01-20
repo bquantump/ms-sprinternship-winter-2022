@@ -45,6 +45,7 @@ class filter_workload(gr.top_block):
         ##################################################
         # Blocks
         ##################################################
+        self.freq_offset = (dspcore.FFT_SAMP_RATE) * (-7.5 + self.chan_num)
         self.network_udp_source_0 = network.udp_source(gr.sizeof_gr_complex, 1, self.rec_port, 0, 1472, False, False, False)
         self.network_udp_sink_0 = network.udp_sink(gr.sizeof_gr_complex, 1, self.forwarding_ip, self.forwarding_port, 0, 1472, False)
         self.freq_xlating_fft_filter_ccc_0 = filter.freq_xlating_fft_filter_ccc(16, self.lpf_taps, self.freq_offset, self.samp_rate)

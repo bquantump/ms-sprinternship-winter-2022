@@ -1,0 +1,4 @@
+ZC_ROOT: 25
+chan_idx: 2
+rec_port: 60005
+threshold: 24

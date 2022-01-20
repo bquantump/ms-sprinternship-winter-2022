@@ -24,12 +24,12 @@ def run_deployment(args):
     
     if args.replica * len(args.workload_names) != len(args.configs):
         raise RuntimeError('length of workloads does not match length of config or eventhubs!')
-        
+    print(f'args.workload {args.configs}')
     configs = []
     for replica in range(args.replica):
         configs.append([])
         for workload in range(len(args.workload_names)):
-            configs[replica].append(args.configs[(replica + 1) * workload])
+            configs[replica].append(args.configs[(replica * len(args.workload_names)) + workload])
     print(configs)
     print("\n")
     make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
