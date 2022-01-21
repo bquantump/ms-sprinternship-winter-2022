@@ -7,38 +7,37 @@ from azure.identity import DefaultAzureCredential
 import os
 
 def run_deployment(args):
-    VNET_NAME = "python-example-vnet"
-    SUBNET_NAME = "python-example-subnet"
-    IP_NAME = "python-example-ip"
-    IP_CONFIG_NAME = "python-example-ip-config"
-    NIC_NAME = "python-example-nic"
-    #EVENTHUB_NAME = "python-example-eventhub"
-    NAMESPACE_NAME = "python-example-namespace"
-    STORAGE_ACCOUNT_NAME = "storagesamanvitha1"
+    VNET_NAME = "VNET-Sprinternship"
+    SUBNET_NAME = "SUBNET-Sprinternship"
+    IP_NAME = "IPName-Sprinternship"
+    IP_CONFIG_NAME = "IpConfigName-Sprinternship"
+    NIC_NAME = "NICName-Sprinternship"
+    NAMESPACE_NAME = "NameSpace-Sprinternship"
+    STORAGE_ACCOUNT_NAME = "Sprinternship-Storage"
     LOCATION = "South Central US"
     RETENTION_IN_DAYS = "4"
     PARTITION_COUNT = "4"
     credential = DefaultAzureCredential()
     subscription_id = os.environ["SUBSCRIPTION_ID"]
-    nsg_name = "testnsg"
+    nsg_name = "NSG-Sprinternship"
     
     if args.replica * len(args.workload_names) != len(args.configs):
-        raise RuntimeError('length of workloads does not match length of config or eventhubs!')
-    print(f'args.workload {args.configs}')
+        raise RuntimeError('Length of workloads does not match length of config or eventhubs!')
+    
     configs = []
     for replica in range(args.replica):
         configs.append([])
         for workload in range(len(args.workload_names)):
             configs[replica].append(args.configs[(replica * len(args.workload_names)) + workload])
-    print(configs)
-    print("\n")
+    
     make_rg_if_does_not_exist(subscription_id, args.resource_group, credential, args.location)
-    print("rg making completed!!\n")
+    print("Creation of Resource Group - COMPLETED\n")
+    
     list_of_ip_addresses = create_all_vm(args.workload_names, args.workload_paths, configs, args.location, credential, args.resource_group, args.key_vault, 
                    os.environ['OBJECT_ID'], VNET_NAME, SUBNET_NAME, IP_NAME, IP_CONFIG_NAME, NIC_NAME, subscription_id, nsg_name, num_retries=3, 
                    replica=args.replica if hasattr(args, 'replica') else 1)
     print(list_of_ip_addresses)
-    print("all vm creation is completed!!\n")
+    print("Creation of the Workloads - COMPLETED\n")
     
     first_priv_ip_address_list = []
     for j in range(args.replica):
@@ -46,28 +45,24 @@ def run_deployment(args):
     
     if args.connection == "EventHubs":
         eventhub_list = setup_eventhub_connect(credential, args.resource_group, NAMESPACE_NAME, args.eventhub_names, STORAGE_ACCOUNT_NAME, subscription_id, LOCATION, RETENTION_IN_DAYS, PARTITION_COUNT)
-        print("eventhub created!!")
-       
         temp_list = []
-
         for j in range(len(eventhub_list)):
             temp_list.append('topic'+str(j))
             temp_list.append(eventhub_list[j])
-
         dict = ConvertToDictionary(temp_list)
-
         #take in configs paths
         configs_list = args.configs
-
         for i in range(len(configs_list)):
             with open(configs_list[i], 'a+') as file:
                 documents = yaml.dump(dict, file)
-
-
+        print("Creation of Multiple Topics in the EventHub Namespace - COMPLETED")
+        
     elif args.connection == "TCP":
-        setup_tcp_connect(first_priv_ip_address_list, VNET_NAME, SUBNET_NAME, args.resource_group, credential, args.key_vault, nsg_name)
-    
-    print("connection process completed!!\n")
+        connection_pub_ip = setup_tcp_connect(first_priv_ip_address_list, VNET_NAME, SUBNET_NAME, args.resource_group, credential, args.key_vault, nsg_name)
+        print("Creation of the TCP Endpoint - COMPLETED")
+        print(f"The TCP Connection Endpoint Public Ip Address: {connection_pub_ip}\n")
+        
+    print("All Resources Ready\n")
 
 def ConvertToDictionary(lst):
     res_dct = {lst[i]: lst[i + 1] for i in range(0, len(lst), 2)}
@@ -105,5 +100,4 @@ if __name__ == '__main__':
     deployer()
 
 
-    #test
 

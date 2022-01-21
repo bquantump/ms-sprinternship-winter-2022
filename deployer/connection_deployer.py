@@ -18,7 +18,7 @@ from deployer.utils import make_difi_to_udp
 
 def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_names, storage_account_name, subscription_id, location, retention_in_days, partition_count):
 
-
+    print("EventHub Namespace and Topics creation begins..")
     eventhub_client = EventHubManagementClient(credential=credential, subscription_id=subscription_id)
     storage_client = StorageManagementClient(credential=credential, subscription_id=subscription_id)
 
@@ -72,6 +72,7 @@ def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_names, 
           }
     }
 
+    
     for j in range(len(eventhub_names)):
         eventhub = eventhub_client.event_hubs.create_or_update(
             rg_name,
@@ -79,16 +80,20 @@ def setup_eventhub_connect(credential, rg_name, namespace_name, eventhub_names, 
             eventhub_names[j],
             BODY)
 
+    print("EventHub Namespace and Topics reated..")
+    
     return eventhub_names
 
 def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_name, credential, key_vault, nsg_name):
     #create vm with public ip that connects to same vnet and subvnets that the other vms connect to, return public ip address
+    print("TCP Endpoint creation begins..")
+    
     location = "westus2"
-    vm_name = "connectvmname5"
+    vm_name = "TCPConnection"
     subscription_id = os.environ["SUBSCRIPTION_ID"]
     ip_config_name = vm_name + "ipaddress"
 
-    nic_name = "python-example-nic" + vm_name
+    nic_name = "TCP_nic" + vm_name
 
     compute_client = ComputeManagementClient(credential, subscription_id)
     network_client = NetworkManagementClient(credential, subscription_id)
@@ -105,7 +110,7 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
 
     ip_address_result = poller.result()
 
-    print(f"Provisioned public IP address {ip_address_result.name} with address {ip_address_result.ip_address}")
+    print(f"Provisioned Public IP address {ip_address_result.name} with address {ip_address_result.ip_address}")
 
     subnet_result = network_client.subnets.get(rg_name, vnet_name, subnet_name)
     nsg_result = network_client.network_security_groups.get(rg_name, nsg_name)
@@ -127,7 +132,7 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
 
     nic_result = poller.result()
 
-    print(f"Provisioned network interface client {nic_result.name}")
+    print(f"Provisioned Network Interface Client {nic_result.name}")
 
 
     key = rsa.generate_private_key(backend=crypto_default_backend(),public_exponent=65537,key_size=2048)
@@ -180,12 +185,11 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
     vm_result = poller.result()
 
 
-    print(f"Provisioned virtual machine {vm_result.name}")
+    print(f"Provisioned Virtual Machine {vm_result.name}")
 
     f = open(f"{vm_name}_key.pem", "w")
     f.write(private_key.decode("utf-8"))
     f.close()
-
 
     make_difi_to_udp(first_priv_ip_address_list, ip_address_result.ip_address)
     FILE = "difi_to_udp.py"
@@ -202,7 +206,7 @@ def setup_tcp_connect(first_priv_ip_address_list, vnet_name, subnet_name, rg_nam
                 else:
                     break
     cmd = f'ssh -i {vm_name}_key.pem azureuser@{ip_address_result.ip_address} \"python3 install_main.py difi_tcp && tmux new-session -d -s work_sessions \; send-keys \'python3 {FILE}\' Enter\"'
-    print(f"running: {cmd}")
+    
     subprocess.check_call(cmd, shell=True)
 
     return ip_address_result.ip_address

@@ -28,11 +28,11 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     try:
         vm_result = compute_client.virtual_machines.get(rg_name, vm_name=vm_name)
-        print("vm already exists!")
+        print("Virtual Machine Already Exists")
 
         raise RuntimeError()
     except ResourceNotFoundError as e:
-        print('resource does not exist, making vm')
+        print('Resource does not exist, Making A New Virtual Machine\n')
 
 
     # Obtain the management object for networks
@@ -73,7 +73,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
     try:
         vnet_result = network_client.virtual_networks.get(rg_name, VNET_NAME)
     except ResourceNotFoundError as e:
-        print('resource does not exist, making vent')
+        print('Resource does not exist, Making A New Virtual Network')
         make_vnet = True
 
     if make_vnet:
@@ -88,13 +88,13 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
         )
         vnet_result = poller.result()
 
-    print(f"Provisioned virtual network {vnet_result.name} with address prefixes {vnet_result.address_space.address_prefixes}")
+    print(f"Provisioned Virtual Network {vnet_result.name} with address prefixes {vnet_result.address_space.address_prefixes}\n")
 
     make_subnet = False
     try:
         subnet_result = network_client.subnets.get(rg_name, VNET_NAME, SUBNET_NAME)
     except ResourceNotFoundError as e:
-        print('resource does not exist, making subnet')
+        print('Resource does not exist, Making A New Sub Network')
         make_subnet = True
 
     # Step 3: Provision the subnet and wait for completion
@@ -105,7 +105,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
         )
         subnet_result = poller.result()
 
-    print(f"Provisioned virtual subnet {subnet_result.name} with address prefix {subnet_result.address_prefix}")
+    print(f"Provisioned Virtual Subnet {subnet_result.name} with address prefix {subnet_result.address_prefix}\n")
 
     # Step 4: Provision an IP address and wait for completion
     poller = network_client.public_ip_addresses.begin_create_or_update(rg_name,
@@ -120,7 +120,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     ip_address_result = poller.result()
 
-    print(f"Provisioned public IP address {ip_address_result.name} with address {ip_address_result.ip_address}")
+    print(f"Provisioned Public IP Address {ip_address_result.name} with address {ip_address_result.ip_address}\n")
 
     # Step 5: Provision the network interface client
     poller = network_client.network_interfaces.begin_create_or_update(rg_name, NIC_NAME,
@@ -137,7 +137,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     nic_result = poller.result()
 
-    print(f"Provisioned network interface client {nic_result.name}")
+    print(f"Provisioned Network Interface Client {nic_result.name}\n")
 
 
     key = rsa.generate_private_key(backend=crypto_default_backend(),public_exponent=65537,key_size=2048)
@@ -157,7 +157,7 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
             key_vault
         )
     except ResourceNotFoundError as e:
-        print('resource does not exist, making vault')
+        print('Resource does not exist, Making A New Key Vault')
         make_vault = True
 
     if make_vault:
@@ -250,15 +250,14 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
             }
             }
         ).result()
-
-
+        
+    
     secret_client = SecretClient(vault_url=f"https://{key_vault}.vault.azure.net/", credential=credential)
     set_secret = secret_client.set_secret(f"{vm_name}-private-key", private_key)
     set_secret = secret_client.set_secret(f"{vm_name}-public-key", public_key)
 
     USERNAME = "azureuser"
 
-    print(f"Provisioning virtual machine {vm_name} this operation might take a few minutes.")
 
     # Provision the VM specifying only minimal arguments, which defaults to an Ubuntu 18.04 VM
     # on a Standard DS1 v2 plan with a public IP address and a default virtual network/subnet.
@@ -302,14 +301,12 @@ def create_vm(vm_name, location, credential, rg_name, key_vault, object_id,
 
     vm_status = vm.statuses[1].display_status
 
-    print(f"Provisioned virtual machine {vm_result.name} {vm_status}")
+    print(f"Provisioned Virtual Machine {vm_result.name} {vm_status}")
 
 
     private_ip_address_result = network_client.network_interfaces.get(rg_name,NIC_NAME).ip_configurations[0].private_ip_address
 
     return ip_address_result.ip_address, private_key, private_ip_address_result
-
-
 
 
 def create_all_vm(workload_names, workload_paths, workload_configs, location, credential, rg_name, key_vault, obj_id, VNET_NAME, SUBNET_NAME, IP_NAME,
@@ -344,19 +341,19 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
                 
             PY_FILE = workload_paths[i]
             YAML_FILE = workload_configs[rep_count][i]
-            print("yaml file is \n")
+            print("YAML file is \n")
             print(YAML_FILE)
             with open(YAML_FILE) as f:
                 dict = yaml.load(f, Loader=yaml.FullLoader)
-            print(f'dict is {dict}')
+            
             if 'forwarding_ip' in dict and i != len(workload_names) - 1:
                 dict['forwarding_ip'] = private_ip_address[i + 1]
             with open(YAML_FILE, 'w') as f:
                 yaml.dump(dict, f)
-            print(f"yaml loading done for {PY_FILE}")
+            print(f"YAML loading done for {PY_FILE}")
+            
             w_name = workload_names[i] + str(rep_count)
             scp_str=['scp', '-i', f'{w_name}_key.pem', '-o', 'StrictHostKeyChecking=no', f'{PY_FILE}', f'{YAML_FILE}', f'{FILE}', f'{LAUNCH}', f'{oot_module_script}', f'azureuser@{public_ip_address[i]}:/home/azureuser']
-            print(scp_str)
 
             value_returned = subprocess.run(scp_str)
 
@@ -366,7 +363,7 @@ def create_all_vm(workload_names, workload_paths, workload_configs, location, cr
                         time.sleep(30)
                         value_returned = subprocess.run(scp_str)
                     else:
-                        print("good ...")
+                        print("GOOD ...")
                         break
             print("\n")
             print(workload_paths[i])
